@@ -6,16 +6,24 @@ import WalletConnect from './wallets/walletConnect';
 import store, { RootState } from '@/redux/store';
 import { setConnectedWallet } from '@/redux/walletSlice';
 import { createLogger } from '@/utils/logger';
+import { type WalletConnectMetadata } from '@/constants/wallet-connect';
 
 const logger = createLogger('WalletManager');
 
 class WalletManager {
+  private walletConnectIcon?: string;
+  private walletConnectMetadata?: WalletConnectMetadata;
+
+  constructor(walletConnectIcon?: string, walletConnectMetadata?: WalletConnectMetadata) {
+    this.walletConnectIcon = walletConnectIcon;
+    this.walletConnectMetadata = walletConnectMetadata;
+  }
 
   private getWalletClassFromString(wallet: walletNamesType["walletNames"]) {
     if (wallet !== "WalletConnect") {
       throw new Error(`${wallet} is not supported. Only WalletConnect is available.`);
     }
-    return new WalletConnect();
+    return new WalletConnect(this.walletConnectIcon, this.walletConnectMetadata);
   }
 
   public async connect(wallet: walletNamesType["walletNames"]): Promise<void> {

@@ -10,7 +10,7 @@ import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationI
 import { setAddress, setConnectedWallet } from '@/redux/walletSlice';
 import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory } from '@/redux/walletConnectSlice';
 import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/redux/completeWithWalletSlice';
-import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE } from '@/constants/wallet-connect';
+import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata } from '@/constants/wallet-connect';
 import { SageMethods } from '@/constants/sage-methods';
 import { createLogger } from '@/utils/logger';
 
@@ -47,10 +47,13 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
   client: SignClient | undefined
   selectedFingerprint
   session: SessionTypes.Struct | undefined
+  metadata?: WalletConnectMetadata
   
-  constructor(image?: string) {
+  constructor(image?: string, metadata?: WalletConnectMetadata) {
     // Allow image to be passed as prop, otherwise use default from constants
-    this.image = image || DEFAULT_WALLET_IMAGE
+    this.image = image || DEFAULT_WALLET_IMAGE;
+    // Allow metadata to be passed as prop for custom configuration
+    this.metadata = metadata;
     // Give methods access to current Redux state
     const state = store.getState();
     const selectedSession = state.walletConnect.selectedSession;
@@ -169,10 +172,11 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           }
           
           // Update main wallet slice to notify that it is now the active wallet
+          // Use WalletConnect icon (this.image) instead of Sage Wallet icon
           const setConnectedWalletInfo = {
             wallet: "WalletConnect",
             address: address,
-            image: session.peer.metadata.icons[0],
+            image: this.image, // Use WalletConnect icon, not Sage Wallet icon
             name: "WalletConnect"
           }
           store.dispatch(setConnectedWallet(setConnectedWalletInfo))
@@ -768,11 +772,19 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }, filteredStream);
       };
 
+      // Use custom metadata if provided, otherwise use default from config
+      const metadata = this.metadata ? {
+        name: this.metadata.name || SIGN_CLIENT_CONFIG.metadata.name,
+        description: this.metadata.description || SIGN_CLIENT_CONFIG.metadata.description,
+        url: this.metadata.url || SIGN_CLIENT_CONFIG.metadata.url,
+        icons: this.metadata.icons || SIGN_CLIENT_CONFIG.metadata.icons,
+      } : SIGN_CLIENT_CONFIG.metadata;
+
       const initOptions: any = {
         // Use custom filtered logger or standard logger based on config
         logger: createFilteredLogger(),
         projectId: projectId,
-        metadata: SIGN_CLIENT_CONFIG.metadata,
+        metadata: metadata,
       };
 
       // Add relay URL if provided

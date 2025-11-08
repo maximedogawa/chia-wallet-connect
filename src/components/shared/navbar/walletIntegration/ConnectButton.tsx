@@ -12,8 +12,11 @@ import { setCNSName } from '@/redux/walletSlice';
 import { RootState } from '@/redux/store';
 import { useAppDispatch } from '@/hooks';
 import { createLogger } from '@/utils/logger';
+import { type WalletConnectMetadata } from '@/constants/wallet-connect';
 
 const logger = createLogger('ConnectButton');
+
+export type { WalletConnectMetadata };
 
 export interface ConnectButtonProps {
   /**
@@ -25,9 +28,18 @@ export interface ConnectButtonProps {
    * Custom className for the button
    */
   className?: string;
+  /**
+   * WalletConnect icon/image URL (overrides environment variable)
+   */
+  walletConnectIcon?: string;
+  /**
+   * WalletConnect metadata configuration (name, description, url, icons)
+   * Icons default to WalletConnect icon if not provided
+   */
+  walletConnectMetadata?: WalletConnectMetadata;
 }
 
-function ConnectButton({ connectText = "Manage Wallet", className = "" }: ConnectButtonProps) {
+function ConnectButton({ connectText = "Manage Wallet", className = "", walletConnectIcon, walletConnectMetadata }: ConnectButtonProps) {
 
     const dispatch = useAppDispatch();
 

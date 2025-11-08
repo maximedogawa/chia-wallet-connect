@@ -16,6 +16,7 @@ import store from '@/redux/store';
 import WalletManager from "@/utils/walletIntegration/walletManager";
 import WalletConnect from "@/utils/walletIntegration/wallets/walletConnect";
 import { createLogger } from '@/utils/logger';
+import { type WalletConnectMetadata } from '@/constants/wallet-connect';
 
 const logger = createLogger('ConnectWalletModal');
 
@@ -25,9 +26,11 @@ const logger = createLogger('ConnectWalletModal');
 interface ConnectWalletModalProps {
     isOpen: boolean;
     setIsOpen: (value: boolean) => void;
+    walletConnectIcon?: string; // Optional WalletConnect icon/image URL
+    walletConnectMetadata?: WalletConnectMetadata; // Optional WalletConnect metadata configuration
 }
 
-function ConnectWalletModal({ isOpen, setIsOpen }: ConnectWalletModalProps) {
+function ConnectWalletModal({ isOpen, setIsOpen, walletConnectIcon, walletConnectMetadata }: ConnectWalletModalProps) {
 
     const connectedWallet = useSelector((state: RootState) => state.wallet.connectedWallet);
     const walletConnectSessions = useSelector((state: RootState) => state.walletConnect.sessions);
@@ -35,14 +38,14 @@ function ConnectWalletModal({ isOpen, setIsOpen }: ConnectWalletModalProps) {
     const pairingUri = useSelector((state: RootState) => state.walletConnect.pairingUri);
     const [isPairingQRModalOpen, setIsPairingQRModalOpen] = useState(false);
     
-    const walletManager = new WalletManager();
+    const walletManager = new WalletManager(walletConnectIcon, walletConnectMetadata);
     const walletConnectActive = connectedWallet === "WalletConnect" && walletConnectSelectedSession;
 
     // Hydrate UI with WC sessions
     useEffect(() => {
-        const walletConnect = new WalletConnect();
+        const walletConnect = new WalletConnect(walletConnectIcon, walletConnectMetadata);
         walletConnect.updateSessions();
-    }, [])
+    }, [walletConnectIcon, walletConnectMetadata])
 
     // Close pairing modal when pairingUri is cleared (connection successful)
     useEffect(() => {
@@ -53,7 +56,7 @@ function ConnectWalletModal({ isOpen, setIsOpen }: ConnectWalletModalProps) {
 
     const connectWCSession = async () => {
         try {
-            const walletConnect = new WalletConnect();
+            const walletConnect = new WalletConnect(walletConnectIcon, walletConnectMetadata);
             const newSession = await walletConnect.connectSession();
             if (newSession) {
                 logger.info("WC pairing successful!");
@@ -89,7 +92,10 @@ function ConnectWalletModal({ isOpen, setIsOpen }: ConnectWalletModalProps) {
                 <div>
                     <div onClick={() => walletConnectSessions.length ? walletManager.connect("WalletConnect") : (connectWCSession(), setIsPairingQRModalOpen(true))} className={`${walletConnectActive ? `bg-green-700/20 focus:ring-green-700/20` : 'bg-brandDark/10'} ${walletConnectActive || (pairingUri && isPairingQRModalOpen) || isPairingQRModalOpen ? 'rounded-t-xl' : 'rounded-xl'} hover:opacity-80 group flex items-center justify-between border-2 border-transparent hover:border-brandDark/10 py-4 px-4 cursor-pointer`}>
                         <div className="flex items-center gap-4">
-                            <WalletConnectIcon className="w-10 h-10 dark:fill-brandLight" />
+                            <WalletConnectIcon 
+                                className="w-10 h-10 dark:fill-brandLight" 
+                                icon={walletConnectIcon}
+                            />
                         </div>
                         <button className={`
                         ${walletConnectActive ? 'outline-none text-green-700' : ''}
