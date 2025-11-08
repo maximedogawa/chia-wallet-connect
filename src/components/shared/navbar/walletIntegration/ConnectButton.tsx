@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
-import Image from 'next/image';
 import useSWR from "swr";
+
+import SafeImage from '../../SafeImage';
 
 import ConnectWalletModal from './ConnectWalletModal';
 
@@ -76,7 +77,7 @@ function ConnectButton({ connectText = "Manage Wallet", className = "", walletCo
       }
      }
     );
-  
+
     const displayAddress = () => {
       if (address && process.env.NEXT_PUBLIC_XCH) {
         const short_address = `${address.slice(0, 7)}...${address.slice(-4)}`;
@@ -90,13 +91,18 @@ function ConnectButton({ connectText = "Manage Wallet", className = "", walletCo
     const defaultClassName = "flex items-center gap-2 bg-brandDark/10 text-brandDark dark:text-brandLight px-6 py-1.5 font-medium rounded-xl animate-fadeIn hover:opacity-80";
     const buttonClassName = className ? `${defaultClassName} ${className}` : defaultClassName;
 
-    return ( 
+    return (
         <>
             <button onClick={() => setIsWalletModalOpen(true)} className={buttonClassName}>
-                {(connectedWallet && displayWalletImage && isWalletConnectActuallyConnected) && <Image src={displayWalletImage} width={20} height={20} alt={`${walletName} wallet logo`} className="rounded-full w-5 h-5" />}
+                {(connectedWallet && displayWalletImage && isWalletConnectActuallyConnected) && <SafeImage src={displayWalletImage} width={20} height={20} alt={`${walletName} wallet logo`} className="rounded-full w-5 h-5" />}
                 {!connectedWallet || !isWalletConnectActuallyConnected ? connectText : !!CNSName ? CNSName : displayAddress()}
             </button>
-            <ConnectWalletModal isOpen={isWalletModalOpen} setIsOpen={setIsWalletModalOpen} />
+            <ConnectWalletModal
+              isOpen={isWalletModalOpen}
+              setIsOpen={setIsWalletModalOpen}
+              walletConnectIcon={walletConnectIcon}
+              walletConnectMetadata={walletConnectMetadata}
+            />
         </>
      );
 }

@@ -21,18 +21,18 @@ export { useAppDispatch, useAppSelector } from './hooks';
 
 // Redux slices and actions
 export { setConnectedWallet, setAddress, setCNSName } from './redux/walletSlice';
-export { 
-  connectSession, 
-  setPairingUri, 
-  selectSession, 
-  setSessions, 
+export {
+  connectSession,
+  setPairingUri,
+  selectSession,
+  setSessions,
   deleteTopicFromFingerprintMemory,
-  setSelectedFingerprint 
+  setSelectedFingerprint
 } from './redux/walletConnectSlice';
-export { 
-  setUserMustAddTheseAssetsToWallet, 
-  setOfferRejected, 
-  setRequestStep 
+export {
+  setUserMustAddTheseAssetsToWallet,
+  setOfferRejected,
+  setRequestStep
 } from './redux/completeWithWalletSlice';
 
 // Types
@@ -41,4 +41,4 @@ export type { SessionTypes } from '@walletconnect/types';
 // Shared components (if needed)
 export { default as Modal } from './components/shared/Modal';
 export { default as CopyButton } from './components/shared/CopyButton';
-
+export { default as SafeImage } from './components/shared/SafeImage';

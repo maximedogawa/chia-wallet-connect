@@ -96,11 +96,35 @@ yarn add @chia/wallet-connect
 pnpm add @chia/wallet-connect
 ```
 
-### Basic Usage
+### Setup
 
-#### 1. Setup Redux Provider
+#### 1. Import Styles
 
-Wrap your app with the Redux Provider and PersistGate:
+**Important**: You must import the package styles in your app's main entry point:
+
+```tsx
+// In your _app.tsx, layout.tsx, or main.tsx
+import '@chia/wallet-connect/styles';
+```
+
+#### 2. Configure Tailwind CSS (if using Tailwind)
+
+Add the package to your Tailwind config so it can process the component classes:
+
+```js
+// tailwind.config.js
+module.exports = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Add this
+  ],
+  // ... rest of your config
+}
+```
+
+#### 3. Setup Redux Provider
+
+Wrap your app with the Redux Provider:
 
 ```tsx
 import { Provider } from 'react-redux';
@@ -111,14 +135,16 @@ function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        {/* Your app components */}
+        {/* Your app */}
       </PersistGate>
     </Provider>
   );
 }
 ```
 
-#### 2. Use the Connect Button
+### Basic Usage
+
+#### Use the Connect Button
 
 ```tsx
 import { ConnectButton } from '@chia/wallet-connect';
