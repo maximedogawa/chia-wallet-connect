@@ -111,13 +111,29 @@ function ConnectWalletModal({ isOpen, setIsOpen, walletConnectIcon, walletConnec
                 {/* Wallet Connect */}
                 <div>
                     <div 
-                        onClick={() => {
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             if (walletConnectSessions.length) {
                                 walletManager.connect("WalletConnect");
                             } else {
                                 connectWCSession();
                             }
-                        }} 
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (walletConnectSessions.length) {
+                                    walletManager.connect("WalletConnect");
+                                } else {
+                                    connectWCSession();
+                                }
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Connect WalletConnect" 
                         className={`
                             ${walletConnectActive 
                                 ? 'bg-green-700/20 focus:ring-green-700/20' 
@@ -186,3 +202,4 @@ function ConnectWalletModal({ isOpen, setIsOpen, walletConnectIcon, walletConnec
 }
 
 export default ConnectWalletModal;
+

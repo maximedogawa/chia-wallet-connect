@@ -18,6 +18,10 @@ import { isIOS } from '@/utils/deviceDetection';
 
 const logger = createLogger('WalletConnect');
 
+// Singleton SignClient instance to prevent multiple initializations
+let globalSignClient: SignClient | null = null;
+let globalSignClientPromise: Promise<SignClient> | null = null;
+
 
 interface wallet {
   data: string
@@ -758,6 +762,19 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     // If client has been saved to object, return that instead of completing a new sign
     if (this.client) return this.client;
 
+    // Use global singleton to prevent multiple initializations
+    if (globalSignClient) {
+      this.client = globalSignClient;
+      return globalSignClient;
+    }
+
+    // If initialization is in progress, wait for it
+    if (globalSignClientPromise) {
+      const client = await globalSignClientPromise;
+      this.client = client;
+      return client;
+    }
+
     try {
       const projectId = SIGN_CLIENT_CONFIG.projectId;
 
@@ -864,12 +881,20 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         initOptions.relayUrl = SIGN_CLIENT_CONFIG.relayUrl;
       }
 
-      const signClient = await SignClient.init(initOptions);
-      this.client = signClient;
+      // Create initialization promise to prevent concurrent initializations
+      globalSignClientPromise = SignClient.init(initOptions).then((signClient) => {
+        globalSignClient = signClient;
+        this.client = signClient;
+        globalSignClientPromise = null;
+        return signClient;
+      });
+
+      const signClient = await globalSignClientPromise;
       
       // Initialize native WalletConnect modal for desktop (not iOS)
       // iOS uses custom modal with better clipboard support
-      if (!isIOS() && typeof window !== 'undefined') {
+      // Only initialize modal once per instance
+      if (!this.modal && !isIOS() && typeof window !== 'undefined') {
         const modalConfig = getModalConfig();
         if (modalConfig) {
           try {
@@ -889,7 +914,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       
       return signClient;
     } catch (e) {
+      // Clear the promise on error so retry is possible
+      globalSignClientPromise = null;
       toast.error(`Wallet - ${e}`)
+      throw e; // Re-throw to allow calling code to handle the error
     }
   }
 

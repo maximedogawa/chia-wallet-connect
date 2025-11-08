@@ -83,19 +83,21 @@ function CustomWalletConnectModal({ isOpen, onClose }: CustomWalletConnectModalP
                 <div className="flex flex-col items-center px-4 sm:px-6 py-6 sm:py-8">
                   {/* Loading state */}
                   {!pairingUri && (
-                    <div className="flex flex-col items-center gap-3 sm:gap-4 py-8 sm:py-12">
+                    <div className="flex flex-col items-center gap-3 sm:gap-4 py-8 sm:py-12 w-full">
                       <div className="w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-2xl bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 animate-pulse flex items-center justify-center">
                         <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                           Generating QR code...
                         </div>
                       </div>
-                      {/* Hidden focusable element for FocusTrap */}
+                      {/* Focusable element for FocusTrap - Cancel button */}
                       <button
-                        className="sr-only"
+                        type="button"
+                        onClick={handleClose}
+                        className="mt-4 w-full py-2.5 sm:py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40 rounded-xl transition-all backdrop-blur-sm border border-white/30 dark:border-gray-700/30"
                         tabIndex={0}
-                        aria-label="Loading"
-                        disabled
-                      />
+                      >
+                        Cancel
+                      </button>
                     </div>
                   )}
 
