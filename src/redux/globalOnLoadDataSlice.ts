@@ -21,7 +21,7 @@ export const getPairs = createAsyncThunk('wallet/getPairs', async (_, { getState
     return await getAllPairs();
   } catch (error: any) {
     if (error.message) {
-      console.log("Error while fetching tokens:", error)
+      // Error logged by async thunk rejection handler
     }
     throw error;
   }

@@ -33,8 +33,9 @@ const CopyButton = ({ copyText, height, disabled=false, variant, children }: Cop
       }, 1500);
     })
     .catch((error) => {
+      // eslint-disable-next-line no-console
       console.error('Copy failed:', error);
-      alert(`Failed to copy: ${copyText}`)
+      alert(`Failed to copy: ${copyText}`);
     });
   };
 
@@ -42,7 +43,7 @@ const CopyButton = ({ copyText, height, disabled=false, variant, children }: Cop
 
     // Default button style
     let style = "bg-brandDark/10 text-center font-medium py-1 flex items-center justify-center gap-2 px-4 whitespace-nowrap rounded-lg";
-    let disabledStyle = disabled ? 'opacity-20 hover:opacity-20 cursor-not-allowed animate-pulse' : 'hover:opacity-80 cursor-pointer';
+    const disabledStyle = disabled ? 'opacity-20 hover:opacity-20 cursor-not-allowed animate-pulse' : 'hover:opacity-80 cursor-pointer';
     let copiedStyle = isCopied ? 'cursor-default bg-green-700/20 text-green-700' : 'text-brandDark dark:text-brandLight';
 
     // Invisible button style

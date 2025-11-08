@@ -1,8 +1,25 @@
 {
   "extends": "next/core-web-vitals",
   "plugins": ["import"],
+  "ignorePatterns": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "public/**",
+    "*.config.js",
+    "*.config.ts",
+    "*.config.mjs",
+    "next-env.d.ts"
+  ],
   "rules": {
     "import/order": ["error", { "newlines-between": "always" }],
-    "import/no-cycle": "error"
+    "import/no-cycle": "error",
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-template": "error",
+    "no-useless-return": "error",
+    "no-useless-concat": "error"
   }
 }

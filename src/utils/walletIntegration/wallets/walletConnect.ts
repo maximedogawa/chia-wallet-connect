@@ -10,8 +10,11 @@ import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationI
 import { setAddress, setConnectedWallet } from '@/redux/walletSlice';
 import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory } from '@/redux/walletConnectSlice';
 import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/redux/completeWithWalletSlice';
-import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE } from '@/constants/wallet-connect';
+import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata } from '@/constants/wallet-connect';
 import { SageMethods } from '@/constants/sage-methods';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('WalletConnect');
 
 
 interface wallet {
@@ -44,10 +47,13 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
   client: SignClient | undefined
   selectedFingerprint
   session: SessionTypes.Struct | undefined
+  metadata?: WalletConnectMetadata
   
-  constructor(image?: string) {
+  constructor(image?: string, metadata?: WalletConnectMetadata) {
     // Allow image to be passed as prop, otherwise use default from constants
-    this.image = image || DEFAULT_WALLET_IMAGE
+    this.image = image || DEFAULT_WALLET_IMAGE;
+    // Allow metadata to be passed as prop for custom configuration
+    this.metadata = metadata;
     // Give methods access to current Redux state
     const state = store.getState();
     const selectedSession = state.walletConnect.selectedSession;
@@ -64,18 +70,17 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       const sessions = await this.getAllSessions();
       if (sessions) {
         store.dispatch(setSessions(sessions));
-        return
       } else {
         store.dispatch(setSessions([]))
         store.dispatch(setAddress(null));
         if (store.getState().wallet.connectedWallet === "WalletConnect") store.dispatch(setConnectedWallet(null))
-        console.error('No WC sessions found');
+        logger.error('No WC sessions found');
       }
-    } catch (error: any) {
-      if (error.message) {
-        console.error(`WalletConnect - ${error.message}`);
-      }
-      throw error;
+      } catch (error: any) {
+        if (error.message) {
+          logger.error(`WalletConnect - ${error.message}`);
+        }
+        throw error;
     }
   }
 
@@ -117,7 +122,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         if (signClient) {
           // Use REQUIRED_NAMESPACES from constants (includes all Sage methods)
           // Fetch uri to display QR code to establish new wallet connection
-          var { uri, approval } = await signClient.connect({
+          const { uri, approval } = await signClient.connect({
             requiredNamespaces: REQUIRED_NAMESPACES,
           });
 
@@ -128,7 +133,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
           // If new connection established successfully
           const session = await approval();
-          console.log('Connected Chia wallet via WalletConnect', session, signClient)
+          logger.info('Connected Chia wallet via WalletConnect', { session, signClient });
           store.dispatch(setPairingUri(null));
           this.detectEvents()
 
@@ -143,34 +148,35 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           // Verify connection using CHIA_GET_ADDRESS method (Sage method)
           let address: string | null = null;
           try {
-            console.debug('[WalletConnect] Verifying connection using CHIA_GET_ADDRESS method...');
+            logger.debug('Verifying connection using CHIA_GET_ADDRESS method...');
             address = await this.verifyConnectionWithSageMethod();
             if (address) {
-              console.debug('[WalletConnect] Connection verified successfully!');
-              console.debug('[WalletConnect] Address retrieved:', address);
+              logger.debug('Connection verified successfully!');
+              logger.debug('Address retrieved:', address);
             } else {
-              console.debug('[WalletConnect] CHIA_GET_ADDRESS returned null, trying fallback method...');
+              logger.debug('CHIA_GET_ADDRESS returned null, trying fallback method...');
               // Fallback to regular getAddress if Sage method doesn't work
               address = await this.getAddress();
-              console.debug('[WalletConnect] Fallback address fetch result:', address);
+              logger.debug('Fallback address fetch result:', address);
             }
           } catch (addressError) {
-            console.debug('[WalletConnect] CHIA_GET_ADDRESS verification failed, trying fallback:', addressError);
+            logger.debug('CHIA_GET_ADDRESS verification failed, trying fallback:', addressError);
             // Try fallback method
             try {
               address = await this.getAddress();
-              console.debug('[WalletConnect] Fallback address fetch successful:', address);
+              logger.debug('Fallback address fetch successful:', address);
             } catch (fallbackError) {
-              console.error('[WalletConnect] Failed to fetch address after connection:', fallbackError);
+              logger.error('Failed to fetch address after connection:', fallbackError);
               // Continue even if address fetch fails - connection is still successful
             }
           }
           
           // Update main wallet slice to notify that it is now the active wallet
+          // Use WalletConnect icon (this.image) instead of Sage Wallet icon
           const setConnectedWalletInfo = {
             wallet: "WalletConnect",
             address: address,
-            image: session.peer.metadata.icons[0],
+            image: this.image, // Use WalletConnect icon, not Sage Wallet icon
             name: "WalletConnect"
           }
           store.dispatch(setConnectedWallet(setConnectedWalletInfo))
@@ -178,7 +184,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           return session;
         }
     } catch (error) {
-      console.log('Error connecting WalletConnect session:', error);
+      logger.error('Error connecting WalletConnect session:', error);
       // Clear pairing URI on error
       store.dispatch(setPairingUri(null));
       // Re-throw error so calling code can handle it
@@ -220,7 +226,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
       } catch (error: any) {
         this.updateSessions();
-        console.log(error.message);
+        logger.error('Error disconnecting session:', error.message);
     }
   }
 
@@ -232,8 +238,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     store.dispatch(setOfferRejected(false));
     // showCompleteWithWalletModal(this)
 
-    var firstRun = true
-    var tempAssetsToAddArray: generateOffer["offerAssets"] = [];
+    let firstRun = true;
+    let tempAssetsToAddArray: generateOffer["offerAssets"] = [];
 
     let walletsResponse;
     while (firstRun || tempAssetsToAddArray.length > 0) {
@@ -310,14 +316,14 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     store.dispatch(setRequestStep("generateOffer"));
     
     // Generate offer object
-    let offer: {[key: number]: number} = {};
+    const offer: {[key: number]: number} = {};
     offerAssets.forEach((asset) => {
-      if (!asset.walletId) return
-      offer[asset.walletId] = -Math.abs(asset.amount);;
-    })
+      if (!asset.walletId) return;
+      offer[asset.walletId] = -Math.abs(asset.amount);
+    });
 
     // Generate request object
-    let request: {[key: number]: number} = {};
+    const request: {[key: number]: number} = {};
     requestAssets.forEach((asset) => {
       if (!asset.walletId) return
       request[asset.walletId] = asset.amount;
@@ -351,7 +357,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }
 
         if(walletsResponse?.isSage) {
-          console.log("Sage offer request :)");
+          logger.info("Sage offer request");
           /*
           export interface asset {
               assetId: string
@@ -484,7 +490,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }
         
       } catch (error: any) {
-        console.log(error.message)
+        logger.error('Error generating offer:', error.message);
     }
   }
 
@@ -519,7 +525,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         return true;
 
     } catch (error: any) {
-      console.log(`Wallet - ${error.message}`)
+      logger.error(`Wallet - ${error.message}`);
       throw Error(error);
     }
   }
@@ -529,7 +535,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
    * This is used to verify that the connection is working correctly
    */
   async verifyConnectionWithSageMethod(): Promise<string | null> {
-    console.debug('[WalletConnect] verifyConnectionWithSageMethod: Starting verification...');
+    logger.debug('verifyConnectionWithSageMethod: Starting verification...');
     
     let signClient;
     let topic;
@@ -539,13 +545,13 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       topic = state.walletConnect.selectedSession?.topic || this.topic;
       
       if (!topic || !signClient) {
-        console.debug('[WalletConnect] verifyConnectionWithSageMethod: No topic or signClient available');
+        logger.debug('verifyConnectionWithSageMethod: No topic or signClient available');
         throw Error('Not connected via WalletConnect or could not sign client');
       }
       
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Using method:', SageMethods.CHIA_GET_ADDRESS);
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Topic:', topic);
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: ChainId:', this.chainId);
+      logger.debug('verifyConnectionWithSageMethod: Using method:', SageMethods.CHIA_GET_ADDRESS);
+      logger.debug('verifyConnectionWithSageMethod: Topic:', topic);
+      logger.debug('verifyConnectionWithSageMethod: ChainId:', this.chainId);
       
       const request = signClient.request<{address: string}>({
         topic: topic as string,
@@ -556,61 +562,69 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         },
       });
       
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Request sent, awaiting response...');
+      logger.debug('verifyConnectionWithSageMethod: Request sent, awaiting response...');
       const response = await request;
       
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Response received:', response);
+      logger.debug('verifyConnectionWithSageMethod: Response received:', response);
       const address = response?.address || null;
       
       if (address) {
-        console.debug('[WalletConnect] verifyConnectionWithSageMethod: Success! Address:', address);
+        logger.debug('verifyConnectionWithSageMethod: Success! Address:', address);
         store.dispatch(setAddress(address));
       } else {
-        console.debug('[WalletConnect] verifyConnectionWithSageMethod: No address in response');
+        logger.debug('verifyConnectionWithSageMethod: No address in response');
       }
       
       return address;
     } catch (error: any) {
-      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Error occurred:', error);
+      logger.debug('verifyConnectionWithSageMethod: Error occurred:', error);
       if (error.code === 4001) {
-        console.debug('[WalletConnect] verifyConnectionWithSageMethod: Method not supported (4001), wallet may not be Sage');
+        logger.debug('verifyConnectionWithSageMethod: Method not supported (4001), wallet may not be Sage');
       }
       throw error;
     }
   }
 
   async getAddress(): Promise<string | null> {
-    console.log("Attempting to get address via WC...")
+    logger.debug('getAddress: Starting address fetch...');
 
     let signClient;
     let topic;
     try {
       signClient = await this.signClient();
       const state = store.getState();
-      topic = state.walletConnect.selectedSession?.topic
+      topic = state.walletConnect.selectedSession?.topic;
       if (!topic || !signClient) {
-        toast.error('Not connected via WalletConnect or could not sign client', { id: 'failed-to-sign-client' })
+        logger.debug('getAddress: No topic or signClient available');
+        toast.error('Not connected via WalletConnect or could not sign client', { id: 'failed-to-sign-client' });
         throw Error('Not connected via WalletConnect or could not sign client');
       }
-      const selectedSession = state?.walletConnect?.selectedSession
-      if (!selectedSession) return null
+      const selectedSession = state?.walletConnect?.selectedSession;
+      if (!selectedSession) {
+        logger.debug('getAddress: No selected session');
+        return null;
+      }
       const fingerprint = state.walletConnect.selectedFingerprint[selectedSession.topic];
-      if (!fingerprint) return null
+      if (!fingerprint) {
+        logger.debug('getAddress: No fingerprint selected');
+        return null;
+      }
       const wallet_id = selectedSession?.namespaces?.chia?.accounts.findIndex(account => account.includes(fingerprint.toString()));
-      console.log(wallet_id)
-      if (wallet_id === undefined) return ''
-      console.log({
+      logger.debug('getAddress: Wallet ID:', wallet_id);
+      if (wallet_id === undefined) {
+        logger.debug('getAddress: Wallet ID is undefined');
+        return '';
+      }
+      logger.debug('getAddress: Requesting address with method chia_getCurrentAddress', {
         topic,
         chainId: this.chainId,
-        request: {
-          method: "chia_getCurrentAddress",
-          params: {
-            fingerprint: fingerprint,
-            wallet_id,
-            new_address: false
-          },
+        method: "chia_getCurrentAddress",
+        params: {
+          fingerprint: fingerprint,
+          wallet_id,
+          new_address: false
         },
-      })
+      });
 
       const request = signClient.request<{data: string}>({
         topic,
@@ -624,17 +638,21 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           },
         },
       });
-      const response = await request
+      const response = await request;
 
-      console.log({ addressRequestResponse: response });
-      const address = response?.data || null
+      logger.debug('getAddress: Address request response received:', response);
+      const address = response?.data || null;
       if (address) {
-        store.dispatch(setAddress(address))
+        logger.debug('getAddress: Success! Address retrieved:', address);
+        store.dispatch(setAddress(address));
+      } else {
+        logger.debug('getAddress: No address in response');
       }
       return address;
     } catch (error: any) {
       if(error.code === 4001 && error.message === "Unsupported method: chia_getCurrentAddress") {
-        console.log("Sage detected!");
+        logger.debug('getAddress: chia_getCurrentAddress not supported, trying Sage method chia_getAddress');
+        logger.info("Sage wallet detected, using chia_getAddress method");
 
         const request = (signClient as SignClient).request<{address: string}>({
           topic: topic as string,
@@ -644,17 +662,18 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             params: {},
           },
         });
-        const response = await request
+        const response = await request;
         
-        console.log({ response });
+        logger.debug('getAddress: Sage address response received:', response);
         const address = response.address;
         if (address) {
-          store.dispatch(setAddress(address))
+          logger.debug('getAddress: Success! Sage address retrieved:', address);
+          store.dispatch(setAddress(address));
         }
         return address;
       }
-      console.error(error)
-      return null
+      logger.error('getAddress: Error getting address:', error);
+      return null;
     }
   }
 
@@ -715,24 +734,32 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
               
               if (!shouldSkip) {
                 // Use console methods based on log level
+                // These console calls are intentional for WalletConnect's internal pino logger
+                // eslint-disable-next-line no-console
                 const level = logObj.level || 50;
                 if (level >= 50) {
+                  // eslint-disable-next-line no-console
                   console.error(chunk);
                 } else if (level >= 40) {
                   if (logLevel === 'warn' || logLevel === 'info' || logLevel === 'debug' || logLevel === 'trace') {
+                    // eslint-disable-next-line no-console
                     console.warn(chunk);
                   }
                 } else if (level >= 30 && (logLevel === 'info' || logLevel === 'debug' || logLevel === 'trace')) {
+                  // eslint-disable-next-line no-console
                   console.info(chunk);
                 } else if (level >= 20 && (logLevel === 'debug' || logLevel === 'trace')) {
+                  // eslint-disable-next-line no-console
                   console.debug(chunk);
                 } else if (level >= 10 && logLevel === 'trace') {
+                  // eslint-disable-next-line no-console
                   console.trace(chunk);
                 }
               }
             } catch (e) {
               // If parsing fails, log it normally (shouldn't happen with pino)
               if (logLevel === 'error' || logLevel === 'warn') {
+                // eslint-disable-next-line no-console
                 console.error(chunk);
               }
             }
@@ -745,11 +772,19 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }, filteredStream);
       };
 
+      // Use custom metadata if provided, otherwise use default from config
+      const metadata = this.metadata ? {
+        name: this.metadata.name || SIGN_CLIENT_CONFIG.metadata.name,
+        description: this.metadata.description || SIGN_CLIENT_CONFIG.metadata.description,
+        url: this.metadata.url || SIGN_CLIENT_CONFIG.metadata.url,
+        icons: this.metadata.icons || SIGN_CLIENT_CONFIG.metadata.icons,
+      } : SIGN_CLIENT_CONFIG.metadata;
+
       const initOptions: any = {
         // Use custom filtered logger or standard logger based on config
         logger: createFilteredLogger(),
         projectId: projectId,
-        metadata: SIGN_CLIENT_CONFIG.metadata,
+        metadata: metadata,
       };
 
       // Add relay URL if provided

@@ -46,7 +46,8 @@ const walletConnectSlice = createSlice({
       if (selectedSession) {
         state.selectedSession = selectedSession;
       } else {
-        // Provided session topic is not valid
+        // Provided session topic is not valid - log error but don't break functionality
+        // eslint-disable-next-line no-console
         console.error(`Invalid session topic: ${topic}`);
       }
     },

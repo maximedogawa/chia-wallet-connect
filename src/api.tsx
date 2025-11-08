@@ -154,8 +154,7 @@ export async function refreshRouter(rcat: boolean): Promise<void> {
 export async function isCoinSpent(
   coinId: string,
 ): Promise<boolean> {
- const response: any = await axios.post<any>(process.env.NEXT_PUBLIC_XCH === "XCH" ? "https://api.coinset.org/get_coin_record_by_name" : "https://testnet11.api.coinset.org/get_coin_record_by_name", {name: "0x" + coinId});
- console.log({resp_data: response.data});
+ const response: any = await axios.post<any>(process.env.NEXT_PUBLIC_XCH === "XCH" ? "https://api.coinset.org/get_coin_record_by_name" : "https://testnet11.api.coinset.org/get_coin_record_by_name", {name: `0x${coinId}`});
  return response.data.success;
 }
 
@@ -204,8 +203,8 @@ export function getFastQuote(
     throw new Error('Reserves must be positive');
   }
   
-  var inputReserve: number = xchReserve;
-  var outputReserve: number = tokenReserve;
+  let inputReserve: number = xchReserve;
+  let outputReserve: number = tokenReserve;
   if(!xchIsInput) {
     inputReserve = tokenReserve;
     outputReserve = xchReserve;

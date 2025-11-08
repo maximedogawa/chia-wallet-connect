@@ -16,15 +16,24 @@ const getChainId = (): string => {
 export const CHIA_CHAIN_ID = getChainId()
 
 // Helper to parse icons from environment variable (comma-separated string or single string)
+// Default: WalletConnect icon from public/assets
 const getMetadataIcons = (): string[] => {
   const iconsEnv = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_ICONS || 
-                   process.env.WALLET_CONNECT_METADATA_ICONS || 
-                   'https://example.com/logo.jpg'
+                   process.env.WALLET_CONNECT_METADATA_ICONS;
   
-  return iconsEnv.includes(',') 
-    ? iconsEnv.split(',').map(icon => icon.trim())
-    : [iconsEnv]
-}
+  if (iconsEnv) {
+    return iconsEnv.includes(',') 
+      ? iconsEnv.split(',').map(icon => icon.trim())
+      : [iconsEnv];
+  }
+  
+  // Default: Use WalletConnect icon
+  const defaultIcon = typeof window !== 'undefined' 
+    ? `${window.location.origin}/assets/walletconnect.svg`
+    : '/assets/walletconnect.svg';
+  
+  return [defaultIcon];
+};
 
 // Metadata configuration (can be overridden via environment variables)
 export const CHIA_METADATA = {
@@ -84,7 +93,19 @@ export const SIGN_CLIENT_CONFIG = {
            'error') as 'error' | 'warn' | 'info' | 'debug' | 'trace',
 }
 
-// Default wallet image (can be overridden)
+// WalletConnect metadata interface for custom configuration
+export interface WalletConnectMetadata {
+  name?: string;
+  description?: string;
+  url?: string;
+  icons?: string[];
+}
+
+// Default WalletConnect icon (can be overridden via environment variable or props)
+export const WALLET_CONNECT_ICON = process.env.NEXT_PUBLIC_WALLET_CONNECT_ICON || 
+                                    '/assets/walletconnect.svg';
+
+// Default wallet image (alias for backward compatibility)
 export const DEFAULT_WALLET_IMAGE = process.env.NEXT_PUBLIC_WALLET_CONNECT_DEFAULT_IMAGE || 
                                      process.env.WALLET_CONNECT_DEFAULT_IMAGE || 
-                                     '/assets/xch.webp'
+                                     WALLET_CONNECT_ICON;

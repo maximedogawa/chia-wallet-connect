@@ -11,6 +11,12 @@ import { selectSession } from '@/redux/walletConnectSlice';
 import { setCNSName } from '@/redux/walletSlice';
 import { RootState } from '@/redux/store';
 import { useAppDispatch } from '@/hooks';
+import { createLogger } from '@/utils/logger';
+import { type WalletConnectMetadata } from '@/constants/wallet-connect';
+
+const logger = createLogger('ConnectButton');
+
+export type { WalletConnectMetadata };
 
 export interface ConnectButtonProps {
   /**
@@ -22,9 +28,18 @@ export interface ConnectButtonProps {
    * Custom className for the button
    */
   className?: string;
+  /**
+   * WalletConnect icon/image URL (overrides environment variable)
+   */
+  walletConnectIcon?: string;
+  /**
+   * WalletConnect metadata configuration (name, description, url, icons)
+   * Icons default to WalletConnect icon if not provided
+   */
+  walletConnectMetadata?: WalletConnectMetadata;
 }
 
-function ConnectButton({ connectText = "Manage Wallet", className = "" }: ConnectButtonProps) {
+function ConnectButton({ connectText = "Manage Wallet", className = "", walletConnectIcon, walletConnectMetadata }: ConnectButtonProps) {
 
     const dispatch = useAppDispatch();
 
@@ -57,14 +72,14 @@ function ConnectButton({ connectText = "Manage Wallet", className = "" }: Connec
         dispatch(setCNSName(data));
       },
       onError: (error) => {
-        console.error("CNS POST query failed", error);
+        logger.error("CNS POST query failed", error);
       }
      }
     );
   
     const displayAddress = () => {
       if (address && process.env.NEXT_PUBLIC_XCH) {
-        const short_address = address.slice(0, 7) + '...' + address.slice(-4);
+        const short_address = `${address.slice(0, 7)}...${address.slice(-4)}`;
         return short_address ? short_address : connectText;
       }
       return connectText;
