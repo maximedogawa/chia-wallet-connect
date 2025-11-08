@@ -109,3 +109,31 @@ export const WALLET_CONNECT_ICON = process.env.NEXT_PUBLIC_WALLET_CONNECT_ICON |
 export const DEFAULT_WALLET_IMAGE = process.env.NEXT_PUBLIC_WALLET_CONNECT_DEFAULT_IMAGE || 
                                      process.env.WALLET_CONNECT_DEFAULT_IMAGE || 
                                      WALLET_CONNECT_ICON;
+
+// WalletConnect Modal configuration (for desktop)
+// Only used on desktop platforms, iOS uses custom modal
+// Note: projectId must be defined - checked at runtime before modal initialization
+// Theme is detected dynamically from the document's dark class
+export const getModalConfig = () => {
+  const projectId = SIGN_CLIENT_CONFIG.projectId;
+  if (!projectId) {
+    return null;
+  }
+  
+  // Detect current theme from document (matches Tailwind's dark mode)
+  let themeMode: 'light' | 'dark' = 'light';
+  if (typeof window !== 'undefined') {
+    const isDark = document.documentElement.classList.contains('dark');
+    themeMode = isDark ? 'dark' : 'light';
+  } else {
+    // Fallback to environment variable or default to light
+    const envTheme = process.env.NEXT_PUBLIC_WALLET_CONNECT_THEME;
+    themeMode = (envTheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+  }
+  
+  return {
+    projectId,
+    chains: [CHIA_CHAIN_ID],
+    themeMode,
+  };
+};
