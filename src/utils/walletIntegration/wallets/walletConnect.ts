@@ -2,6 +2,7 @@ import type { SessionTypes } from "@walletconnect/types";
 import SignClient from "@walletconnect/sign-client";
 import Client from '@walletconnect/sign-client';
 import { toast } from 'react-hot-toast';
+import pino from 'pino';
 
 import store from '../../../redux/store';
 import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationInterface';
@@ -9,6 +10,8 @@ import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationI
 import { setAddress, setConnectedWallet } from '@/redux/walletSlice';
 import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory } from '@/redux/walletConnectSlice';
 import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/redux/completeWithWalletSlice';
+import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE } from '@/constants/wallet-connect';
+import { SageMethods } from '@/constants/sage-methods';
 
 
 interface wallet {
@@ -33,18 +36,18 @@ interface WalletsResponse {
   isSage: boolean
 }
 
-const chainId = process.env.NEXT_PUBLIC_CHIA_NETWORK === "testnet" ? "chia:testnet" : "chia:mainnet";
-
 class WalletConnectIntegration implements WalletIntegrationInterface {
   name = "WalletConnect"
-  image = "/assets/xch.webp"
-  chainId = chainId
+  image: string
+  chainId = CHIA_CHAIN_ID
   topic
   client: SignClient | undefined
   selectedFingerprint
   session: SessionTypes.Struct | undefined
   
-  constructor() {
+  constructor(image?: string) {
+    // Allow image to be passed as prop, otherwise use default from constants
+    this.image = image || DEFAULT_WALLET_IMAGE
     // Give methods access to current Redux state
     const state = store.getState();
     const selectedSession = state.walletConnect.selectedSession;
@@ -112,25 +115,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     try {
       const signClient = await this.signClient();
         if (signClient) {
-          const namespaces = {
-            chia: {
-              methods: [
-                "chia_createOfferForIds",
-                "chia_getWallets",
-                'chia_addCATToken',
-                'chia_getCurrentAddress',
-                'chia_getNextAddress',
-                'chia_getAddress',
-                'chia_createOffer'
-              ],
-              chains: [chainId],
-              events: [],
-            },
-          };
-
+          // Use REQUIRED_NAMESPACES from constants (includes all Sage methods)
           // Fetch uri to display QR code to establish new wallet connection
           var { uri, approval } = await signClient.connect({
-            requiredNamespaces: namespaces,
+            requiredNamespaces: REQUIRED_NAMESPACES,
           });
 
           // Display QR code to user
@@ -152,14 +140,30 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           this.session = session;
           this.selectedFingerprint = Number(session.namespaces.chia.accounts[0].split(":")[2]);
           
-          // Fetch address immediately after connection to verify it worked
+          // Verify connection using CHIA_GET_ADDRESS method (Sage method)
           let address: string | null = null;
           try {
-            address = await this.getAddress();
-            console.log('WalletConnect address fetched:', address);
+            console.debug('[WalletConnect] Verifying connection using CHIA_GET_ADDRESS method...');
+            address = await this.verifyConnectionWithSageMethod();
+            if (address) {
+              console.debug('[WalletConnect] Connection verified successfully!');
+              console.debug('[WalletConnect] Address retrieved:', address);
+            } else {
+              console.debug('[WalletConnect] CHIA_GET_ADDRESS returned null, trying fallback method...');
+              // Fallback to regular getAddress if Sage method doesn't work
+              address = await this.getAddress();
+              console.debug('[WalletConnect] Fallback address fetch result:', address);
+            }
           } catch (addressError) {
-            console.error('Failed to fetch address after connection:', addressError);
-            // Continue even if address fetch fails - connection is still successful
+            console.debug('[WalletConnect] CHIA_GET_ADDRESS verification failed, trying fallback:', addressError);
+            // Try fallback method
+            try {
+              address = await this.getAddress();
+              console.debug('[WalletConnect] Fallback address fetch successful:', address);
+            } catch (fallbackError) {
+              console.error('[WalletConnect] Failed to fetch address after connection:', fallbackError);
+              // Continue even if address fetch fails - connection is still successful
+            }
           }
           
           // Update main wallet slice to notify that it is now the active wallet
@@ -361,7 +365,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           */
           const resultOffer: {offer: string | undefined, error: string | undefined} = await signClient.request({
             topic: this.topic,
-            chainId: chainId,
+            chainId: this.chainId,
             request: {
               method: "chia_createOffer",
               params: {
@@ -403,7 +407,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         // Send request to generate offer via WalletConnect
         const resultOffer: resultOffer = await signClient.request({
           topic: this.topic,
-          chainId: chainId,
+          chainId: this.chainId,
           request: {
             method: "chia_createOfferForIds",
             params: {
@@ -451,7 +455,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           // Send request to get Wallets via WalletConnect
           const request: Promise<wallets> = signClient.request({
             topic: this.topic,
-            chainId: chainId,
+            chainId: this.chainId,
             request: {
               method: "chia_getWallets",
               params: {
@@ -500,7 +504,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         // Send request to get Wallets via WalletConnect
         const request = signClient.request({
           topic: this.topic,
-          chainId: chainId,
+          chainId: this.chainId,
           request: {
             method: "chia_addCATToken",
             params: {
@@ -517,6 +521,61 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     } catch (error: any) {
       console.log(`Wallet - ${error.message}`)
       throw Error(error);
+    }
+  }
+
+  /**
+   * Verify connection using CHIA_GET_ADDRESS method (Sage wallet method)
+   * This is used to verify that the connection is working correctly
+   */
+  async verifyConnectionWithSageMethod(): Promise<string | null> {
+    console.debug('[WalletConnect] verifyConnectionWithSageMethod: Starting verification...');
+    
+    let signClient;
+    let topic;
+    try {
+      signClient = await this.signClient();
+      const state = store.getState();
+      topic = state.walletConnect.selectedSession?.topic || this.topic;
+      
+      if (!topic || !signClient) {
+        console.debug('[WalletConnect] verifyConnectionWithSageMethod: No topic or signClient available');
+        throw Error('Not connected via WalletConnect or could not sign client');
+      }
+      
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Using method:', SageMethods.CHIA_GET_ADDRESS);
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Topic:', topic);
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: ChainId:', this.chainId);
+      
+      const request = signClient.request<{address: string}>({
+        topic: topic as string,
+        chainId: this.chainId,
+        request: {
+          method: SageMethods.CHIA_GET_ADDRESS,
+          params: {},
+        },
+      });
+      
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Request sent, awaiting response...');
+      const response = await request;
+      
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Response received:', response);
+      const address = response?.address || null;
+      
+      if (address) {
+        console.debug('[WalletConnect] verifyConnectionWithSageMethod: Success! Address:', address);
+        store.dispatch(setAddress(address));
+      } else {
+        console.debug('[WalletConnect] verifyConnectionWithSageMethod: No address in response');
+      }
+      
+      return address;
+    } catch (error: any) {
+      console.debug('[WalletConnect] verifyConnectionWithSageMethod: Error occurred:', error);
+      if (error.code === 4001) {
+        console.debug('[WalletConnect] verifyConnectionWithSageMethod: Method not supported (4001), wallet may not be Sage');
+      }
+      throw error;
     }
   }
 
@@ -542,7 +601,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       if (wallet_id === undefined) return ''
       console.log({
         topic,
-        chainId: chainId,
+        chainId: this.chainId,
         request: {
           method: "chia_getCurrentAddress",
           params: {
@@ -555,7 +614,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
       const request = signClient.request<{data: string}>({
         topic,
-        chainId: chainId,
+        chainId: this.chainId,
         request: {
           method: "chia_getCurrentAddress",
           params: {
@@ -579,7 +638,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
         const request = (signClient as SignClient).request<{address: string}>({
           topic: topic as string,
-          chainId: chainId,
+          chainId: this.chainId,
           request: {
             method: "chia_getAddress",
             params: {},
@@ -609,37 +668,93 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     if (this.client) return this.client;
 
     try {
-      const projectId = process.env.WALLET_CONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
-      const relayUrl = process.env.WALLET_CONNECT_RELAY_URL || process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL;
+      const projectId = SIGN_CLIENT_CONFIG.projectId;
 
       if (!projectId) {
-        throw new Error('WalletConnect project ID is not configured. Please set WALLET_CONNECT_PROJECT_ID in your .env file.');
+        throw new Error('WalletConnect project ID is not configured. Please set WALLET_CONNECT_PROJECT_ID or NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID in your .env file.');
       }
 
-      const metadataName = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_NAME || process.env.WALLET_CONNECT_METADATA_NAME || "Wallet Connect";
-      const metadataDescription = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_DESCRIPTION || process.env.WALLET_CONNECT_METADATA_DESCRIPTION || "Wallet Connect for Chia blockchain";
-      const metadataUrl = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_URL || process.env.WALLET_CONNECT_METADATA_URL || "https://example.com";
-      const metadataIcons = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_ICONS || process.env.WALLET_CONNECT_METADATA_ICONS || "https://example.com/logo.jpg";
-      
-      // Parse icons if it's a comma-separated string, otherwise use as single icon
-      const iconsArray = metadataIcons.includes(',') 
-        ? metadataIcons.split(',').map(icon => icon.trim())
-        : [metadataIcons];
+      // Create a filtered pino logger that suppresses non-critical WalletConnect errors
+      // WalletConnect logs non-critical internal errors (pairing cleanup, history restore, etc.)
+      // that don't affect functionality but clutter the console
+      const createFilteredLogger = () => {
+        const baseLogger = SIGN_CLIENT_CONFIG.logger;
+        
+        // Map log level strings to pino levels
+        const levelMap: Record<string, pino.Level> = {
+          'error': 'error',
+          'warn': 'warn',
+          'info': 'info',
+          'debug': 'debug',
+          'trace': 'trace',
+        };
+        
+        const logLevel = levelMap[baseLogger] || 'error';
+        
+        // Create a custom stream that filters non-critical messages
+        const filteredStream = {
+          write: (chunk: string) => {
+            try {
+              const logObj = JSON.parse(chunk);
+              const context = logObj.context || '';
+              const msg = logObj.msg || '';
+              
+              // Skip these non-critical errors that don't affect functionality
+              const nonCriticalPatterns = [
+                'core/pairing/pairing',
+                'core/history',
+                'Restore will override',
+                'failed to process an inbound message',
+                'onRelayMessage',
+                'Pairing not found',
+              ];
+              
+              const shouldSkip = nonCriticalPatterns.some(pattern => 
+                context.includes(pattern) || msg.includes(pattern) || chunk.includes(pattern)
+              );
+              
+              if (!shouldSkip) {
+                // Use console methods based on log level
+                const level = logObj.level || 50;
+                if (level >= 50) {
+                  console.error(chunk);
+                } else if (level >= 40) {
+                  if (logLevel === 'warn' || logLevel === 'info' || logLevel === 'debug' || logLevel === 'trace') {
+                    console.warn(chunk);
+                  }
+                } else if (level >= 30 && (logLevel === 'info' || logLevel === 'debug' || logLevel === 'trace')) {
+                  console.info(chunk);
+                } else if (level >= 20 && (logLevel === 'debug' || logLevel === 'trace')) {
+                  console.debug(chunk);
+                } else if (level >= 10 && logLevel === 'trace') {
+                  console.trace(chunk);
+                }
+              }
+            } catch (e) {
+              // If parsing fails, log it normally (shouldn't happen with pino)
+              if (logLevel === 'error' || logLevel === 'warn') {
+                console.error(chunk);
+              }
+            }
+          }
+        };
+        
+        // Create pino logger with filtered stream
+        return pino({
+          level: logLevel,
+        }, filteredStream);
+      };
 
       const initOptions: any = {
-        logger: "info",
+        // Use custom filtered logger or standard logger based on config
+        logger: createFilteredLogger(),
         projectId: projectId,
-        metadata: {
-          name: metadataName,
-          description: metadataDescription,
-          url: metadataUrl,
-          icons: iconsArray,
-        },
+        metadata: SIGN_CLIENT_CONFIG.metadata,
       };
 
       // Add relay URL if provided
-      if (relayUrl) {
-        initOptions.relayUrl = relayUrl;
+      if (SIGN_CLIENT_CONFIG.relayUrl) {
+        initOptions.relayUrl = SIGN_CLIENT_CONFIG.relayUrl;
       }
 
       const client = await SignClient.init(initOptions);
