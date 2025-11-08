@@ -3,27 +3,28 @@
   "version": "0.1.0",
   "description": "WalletConnect plugin for Chia blockchain",
   "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "src",
+    "src/styles",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "USAGE.md"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./styles": "./src/styles/globals.css"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "build:package": "tsc -p tsconfig.build.json",
-    "start": "next start",
+    "dev": "cd demo && next dev",
+    "build": "cd demo && next build",
+    "build:package": "tsc -p tsconfig.build.json && npx tsc-alias -p tsconfig.build.json",
+    "start": "cd demo && next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "prepublishOnly": "npm run build:package",
@@ -86,14 +87,15 @@
     "react-window": "^1.8.9",
     "redux-persist": "^6.0.0",
     "tailwindcss": "^3.3.1",
-    "typescript": "^5.1.0"
+    "typescript": "^5.1.0",
+    "tsc-alias": "^1.8.16"
   },
   "overrides": {
     "fast-redact": "^3.5.0",
     "pino": "^10.1.0"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
+    "src/**/*.{ts,tsx,js,jsx}": [
       "eslint --fix --max-warnings 0"
     ]
   }

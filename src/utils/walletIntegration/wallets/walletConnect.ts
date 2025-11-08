@@ -128,6 +128,21 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     try {
       const signClient = await this.signClient();
         if (signClient) {
+          // Ensure modal is initialized before connecting (for desktop)
+          // Modal initialization happens in signClient(), but we need to ensure it's ready
+          if (!this.modal && !isIOS() && typeof window !== 'undefined') {
+            const modalConfig = getModalConfig();
+            if (modalConfig) {
+              try {
+                this.modal = new WalletConnectModal(modalConfig);
+                logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
+                this.setupThemeObserver();
+              } catch (modalError) {
+                logger.error('Failed to initialize WalletConnect modal:', modalError);
+              }
+            }
+          }
+          
           // Use REQUIRED_NAMESPACES from constants (includes all Sage methods)
           // Note: requiredNamespaces is deprecated, using optionalNamespaces instead
           // Fetch uri to display QR code to establish new wallet connection

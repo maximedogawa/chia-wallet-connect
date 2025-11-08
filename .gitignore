@@ -5,6 +5,19 @@
 /.pnp
 .pnp.js
 
+# dist
+dist/
+
+# demo
+demo/node_modules
+demo/.next
+demo/out
+demo/build
+demo/.env.local
+demo/.env.development.local
+demo/.env.test.local
+demo/.env.production.local
+
 # testing
 /coverage
 

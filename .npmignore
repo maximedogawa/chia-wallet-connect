@@ -38,6 +38,9 @@ coverage/
 .temp/
 .tmp/
 
+# Demo app (not needed for package)
+demo/
+
 # Pages (not needed for package)
 src/pages/
 
@@ -45,4 +48,7 @@ src/pages/
 next.config.js
 postcss.config.js
 tailwind.config.js
+
+# Source code (only dist/ is needed)
+src/
 

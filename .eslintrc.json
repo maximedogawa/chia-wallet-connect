@@ -6,6 +6,8 @@
     ".next/**",
     "dist/**",
     "public/**",
+    "demo/**",
+    "examples/**",
     "*.config.js",
     "*.config.ts",
     "*.config.mjs",
@@ -20,6 +22,12 @@
     "prefer-const": "error",
     "prefer-template": "error",
     "no-useless-return": "error",
-    "no-useless-concat": "error"
+    "no-useless-concat": "error",
+    "@next/next/no-html-link-for-pages": "off"
+  },
+  "settings": {
+    "next": {
+      "rootDir": "."
+    }
   }
 }

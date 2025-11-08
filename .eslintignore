@@ -1,0 +1,11 @@
+node_modules/
+.next/
+dist/
+public/
+demo/
+examples/
+*.config.js
+*.config.ts
+*.config.mjs
+next-env.d.ts
+

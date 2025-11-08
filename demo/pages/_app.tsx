@@ -4,10 +4,13 @@ import { Toaster } from 'react-hot-toast';
 import type { AppProps } from 'next/app';
 import { Provider } from 'react-redux';
 
-import Navbar from '@/components/shared/navbar/Navbar';
-import store, { persistor } from '@/redux/store';
-import '@/styles/globals.css';
-import WalletManager from '@/utils/walletIntegration/walletManager';
+// Import from the package source (for demo/testing)
+// In production, other apps would import from '@chia/wallet-connect' (the built package)
+import store, { persistor } from '../../src/redux/store';
+import ConnectButton from '../../src/components/shared/navbar/walletIntegration/ConnectButton';
+import '../../src/styles/globals.css';
+import Navbar from '../../src/components/shared/navbar/Navbar';
+import WalletManager from '../../src/utils/walletIntegration/walletManager';
 
 
 export default function App({ Component, pageProps }: AppProps) {

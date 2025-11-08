@@ -10,7 +10,7 @@
     "module": "esnext",
     "target": "es2015",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "jsx": "react",
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
@@ -28,6 +28,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "demo",
     "src/pages/**/*",
     "src/pages",
     "**/*.test.ts",
