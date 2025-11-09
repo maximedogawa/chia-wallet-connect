@@ -18,7 +18,7 @@ function Modal({isOpen, setIsOpen, title, children, onClose=() => {}}: ModalProp
     onClose();
   }
 
-  return ( 
+  return (
     <Transition appear show={isOpen} as={Fragment}>
     <Dialog as="div" className="relative z-20" onClose={close}>
     <Transition.Child
@@ -49,11 +49,11 @@ function Modal({isOpen, setIsOpen, title, children, onClose=() => {}}: ModalProp
             <Dialog.Title as="h3" className="text-2xl sm:text-3xl pt-3 pb-4 font-bold text-black dark:text-brandLight pr-14">{title}</Dialog.Title>
             <button
               type="button"
-              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-95 flex items-center justify-center transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-md"
+              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 flex items-center justify-center transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-md"
               onClick={close}
               aria-label="Close modal"
             >
-              <CrossIcon className="fill-gray-600 dark:fill-gray-300 group-hover:fill-gray-900 dark:group-hover:fill-white h-4 w-4 transition-colors duration-200" />
+              <CrossIcon className="fill-gray-900 dark:fill-white group-hover:fill-gray-700 dark:group-hover:fill-gray-200 h-4 w-4 transition-colors duration-200" />
             </button>
 
             {/* Main Content Options */}
