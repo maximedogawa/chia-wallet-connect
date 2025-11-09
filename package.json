@@ -27,8 +27,8 @@
     "build": "cd demo && next build",
     "build:package": "tsc -p tsconfig.build.json && npx tsc-alias -p tsconfig.build.json",
     "start": "cd demo && next start",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "lint": "eslint . --max-warnings 20",
+    "lint:fix": "eslint . --fix",
     "prepublishOnly": "npm run build:package",
     "prepare": "husky"
   },

@@ -44,8 +44,8 @@ class WalletManager {
         }
         store.dispatch(setConnectedWallet(setConnectedWalletInfo))
       }
-    } catch (error: any) {
-      if (error.message) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message) {
         toast.error(`Wallet - ${error.message}`);
       }
     }
@@ -77,7 +77,7 @@ class WalletManager {
       const walletClass = this.getWalletClassFromString(connectedWallet);
       await walletClass.addAsset(assetId, symbol, logo, fullName);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error adding asset:', error);
     }
   }

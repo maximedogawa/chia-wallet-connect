@@ -26,7 +26,6 @@ function WalletConnectSession({ img, name, topic }: WalletConnectSession) {
 
   const [isHovering, setIsHovering] = useState(false);
 
-  const connectedWallet = useSelector((state: RootState) => state.wallet.connectedWallet);
   const sessions = useSelector((state: RootState) => state.walletConnect.sessions);
   const selectedSession = useSelector((state: RootState) => state.walletConnect.selectedSession);
   const selectedFingerprint = useSelector((state: RootState) => state.walletConnect.selectedFingerprint)[topic];

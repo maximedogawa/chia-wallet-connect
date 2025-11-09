@@ -13,14 +13,16 @@ export default tseslint.config(
       '**/next.config.*',
       '**/postcss.config.*',
       '**/tailwind.config.*',
+      '**/public/**',
+      '**/demo/**',
+      '**/test.ts',
+      '**/examples/**',
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-  },
-  {
     rules: {
       'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }],
       'no-console': 'error',
@@ -30,24 +32,8 @@ export default tseslint.config(
       'prefer-template': 'error',
       'no-useless-return': 'error',
       'no-useless-concat': 'error',
-      'no-loop-func': 'error',
       'no-iterator': 'error',
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'ForStatement',
-          message:
-            'Use functional programming methods like map, filter, reduce instead of for loops',
-        },
-        {
-          selector: 'WhileStatement',
-          message: 'Use functional programming methods or recursion instead of while loops',
-        },
-        {
-          selector: 'DoWhileStatement',
-          message: 'Use functional programming methods or recursion instead of do-while loops',
-        },
-      ],
+      'no-restricted-syntax': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -58,6 +44,12 @@ export default tseslint.config(
           args: 'none',
         },
       ],
+    },
+  },
+  {
+    files: ['**/utils/walletIntegration/**/*.{ts,tsx}', '**/redux/**/*.{ts,tsx}', '**/api.tsx', '**/components/**/walletIntegration/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 )

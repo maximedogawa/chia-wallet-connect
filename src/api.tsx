@@ -154,7 +154,10 @@ export async function refreshRouter(rcat: boolean): Promise<void> {
 export async function isCoinSpent(
   coinId: string,
 ): Promise<boolean> {
- const response: any = await axios.post<any>(process.env.NEXT_PUBLIC_XCH === "XCH" ? "https://api.coinset.org/get_coin_record_by_name" : "https://testnet11.api.coinset.org/get_coin_record_by_name", {name: `0x${coinId}`});
+ interface CoinRecordResponse {
+   success: boolean;
+ }
+ const response = await axios.post<CoinRecordResponse>(process.env.NEXT_PUBLIC_XCH === "XCH" ? "https://api.coinset.org/get_coin_record_by_name" : "https://testnet11.api.coinset.org/get_coin_record_by_name", {name: `0x${coinId}`});
  return response.data.success;
 }
 

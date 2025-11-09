@@ -45,6 +45,29 @@ interface WalletsResponse {
   isSage: boolean
 }
 
+// WalletConnect error type
+interface WalletConnectError extends Error {
+  code?: number;
+  message: string;
+}
+
+// Asset type for offer/request
+interface WalletConnectAsset {
+  assetId: string;
+  amount: number;
+  hiddenPuzzleHash?: string;
+}
+
+// Type guard for WalletConnect errors
+function isWalletConnectError(error: unknown): error is WalletConnectError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as WalletConnectError).message === 'string'
+  );
+}
+
 class WalletConnectIntegration implements WalletIntegrationInterface {
   name = "WalletConnect"
   image: string
@@ -84,8 +107,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         if (store.getState().wallet.connectedWallet === "WalletConnect") store.dispatch(setConnectedWallet(null))
         logger.error('No WC sessions found');
       }
-      } catch (error: any) {
-        if (error.message) {
+      } catch (error: unknown) {
+        if (isWalletConnectError(error)) {
           logger.error(`WalletConnect - ${error.message}`);
         }
         throw error;
@@ -267,16 +290,19 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         // Remove any saved fingerprint preference if any
         store.dispatch(deleteTopicFromFingerprintMemory(topic));
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.updateSessions();
-        logger.error('Error disconnecting session:', error.message);
+        if (isWalletConnectError(error)) {
+          logger.error('Error disconnecting session:', error.message);
+        } else {
+          logger.error('Error disconnecting session:', error);
+        }
     }
   }
 
   async generateOffer(requestAssets: generateOffer["requestAssets"], offerAssets: generateOffer["offerAssets"], fee: number | undefined): Promise<string | void> {
 
     // Show modal to user taking them through each step of the process
-    const state = store.getState().walletConnect;
     store.dispatch(setRequestStep("getWallets"));
     store.dispatch(setOfferRejected(false));
     // showCompleteWithWalletModal(this)
@@ -401,17 +427,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
         if(walletsResponse?.isSage) {
           logger.info("Sage offer request");
-          /*
-          export interface asset {
-              assetId: string
-              amount: number
-            }
-
-            export interface createOfferParams {
-              offerAssets: asset[]
-              requestAssets: asset[]
-            }
-          */
+         
           const resultOffer: {offer: string | undefined, error: string | undefined} = await signClient.request({
             topic: this.topic,
             chainId: this.chainId,
@@ -419,7 +435,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
               method: "chia_createOffer",
               params: {
                 offerAssets: offerAssets.map(offerItem => {
-                  const asset: any = {
+                  const asset: WalletConnectAsset = {
                     assetId: offerItem.assetId,
                     amount: offerItem.amount
                   };
@@ -429,7 +445,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
                   return asset;
                 }),
                 requestAssets: requestAssets.map(requestItem => {
-                  const asset: any = {
+                  const asset: WalletConnectAsset = {
                     assetId: requestItem.assetId,
                     amount: requestItem.amount
                   };
@@ -478,8 +494,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           return resultOffer.data.offer;
         }
 
-    } catch (error) {
-      // toast.error(`Wallet - Failed to generate offer`)
+    } catch (_error) {
       store.dispatch(setOfferRejected(true));
     }
     
@@ -521,8 +536,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           } else {
             throw Error('Fetching wallet request unsuccessful')
           }
-        } catch (error: any) {
-          if(error.code === 4001 && error.message === "Unsupported method: chia_getWallets") {
+        } catch (error: unknown) {
+          if (isWalletConnectError(error) && error.code === 4001 && error.message === "Unsupported method: chia_getWallets") {
             return {
               isSage: true,
               wallets: null,
@@ -532,8 +547,12 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           }
         }
         
-      } catch (error: any) {
-        logger.error('Error generating offer:', error.message);
+      } catch (error: unknown) {
+        if (isWalletConnectError(error)) {
+          logger.error('Error generating offer:', error.message);
+        } else {
+          logger.error('Error generating offer:', error);
+        }
     }
   }
 
@@ -564,12 +583,16 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           },
         });
 
-        const response = await request;
+        await request;
         return true;
 
-    } catch (error: any) {
-      logger.error(`Wallet - ${error.message}`);
-      throw Error(error);
+    } catch (error: unknown) {
+      if (isWalletConnectError(error)) {
+        logger.error(`Wallet - ${error.message}`);
+      } else {
+        logger.error(`Wallet -`, error);
+      }
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -619,9 +642,9 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       }
       
       return address;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.debug('verifyConnectionWithSageMethod: Error occurred:', error);
-      if (error.code === 4001) {
+      if (isWalletConnectError(error) && error.code === 4001) {
         logger.debug('verifyConnectionWithSageMethod: Method not supported (4001), wallet may not be Sage');
       }
       throw error;
@@ -692,8 +715,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         logger.debug('getAddress: No address in response');
       }
       return address;
-    } catch (error: any) {
-      if(error.code === 4001 && error.message === "Unsupported method: chia_getCurrentAddress") {
+    } catch (error: unknown) {
+      if (isWalletConnectError(error) && error.code === 4001 && error.message === "Unsupported method: chia_getCurrentAddress") {
         logger.debug('getAddress: chia_getCurrentAddress not supported, trying Sage method chia_getAddress');
         logger.info("Sage wallet detected, using chia_getAddress method");
 
@@ -754,8 +777,12 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             
             // If the modal has a method to update theme, use it
             // Otherwise, the theme will be applied on next modal open
-            if (this.modal && typeof (this.modal as any).setTheme === 'function') {
-              (this.modal as any).setTheme(newTheme);
+            interface ModalWithTheme {
+              setTheme?: (theme: string) => void;
+            }
+            const modalWithTheme = this.modal as ModalWithTheme;
+            if (modalWithTheme && typeof modalWithTheme.setTheme === 'function') {
+              modalWithTheme.setTheme(newTheme);
             }
           } catch (error) {
             logger.error('Failed to update modal theme:', error);
@@ -860,7 +887,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
                   console.trace(chunk);
                 }
               }
-            } catch (e) {
+            } catch (_e) {
               // If parsing fails, log it normally (shouldn't happen with pino)
               if (logLevel === 'error' || logLevel === 'warn') {
                 // eslint-disable-next-line no-console
@@ -884,7 +911,14 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         icons: this.metadata.icons || SIGN_CLIENT_CONFIG.metadata.icons,
       } : SIGN_CLIENT_CONFIG.metadata;
 
-      const initOptions: any = {
+      interface SignClientInitOptions {
+        logger: ReturnType<typeof createFilteredLogger>;
+        projectId: string;
+        metadata: typeof SIGN_CLIENT_CONFIG.metadata;
+        relayUrl?: string;
+      }
+
+      const initOptions: SignClientInitOptions = {
         // Use custom filtered logger or standard logger based on config
         logger: createFilteredLogger(),
         projectId: projectId,

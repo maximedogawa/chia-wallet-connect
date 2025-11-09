@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import type { RootState } from './store';
 
-import { getAllPairs, Pair, type Token } from '@/api';
+import { getAllPairs, Pair } from '@/api';
 
 export interface globalOnLoadDataSliceState {
   pairs: Pair[] | null;
@@ -19,8 +19,8 @@ export const getPairs = createAsyncThunk('wallet/getPairs', async (_, { getState
   // On first request
   try {
     return await getAllPairs();
-  } catch (error: any) {
-    if (error.message) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message) {
       // Error logged by async thunk rejection handler
     }
     throw error;

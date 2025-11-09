@@ -79,10 +79,10 @@ function ConnectWalletModal({ isOpen, setIsOpen, walletConnectIcon, walletConnec
                     logger.warn("WalletConnect connected but address not available");
                 }
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             logger.error("WalletConnect connection error:", error);
             setIsPairingQRModalOpen(false); // Close modal on error
-            if (error.message) {
+            if (error instanceof Error && error.message) {
               toast.error(`WalletConnect - ${error.message}`);
             } else {
               toast.error("Failed to connect WalletConnect");

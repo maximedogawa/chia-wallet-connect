@@ -1,6 +1,6 @@
 import { Transition } from '@headlessui/react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useState } from 'react';
+// import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 import CopyButton from '../../CopyButton';
@@ -8,10 +8,6 @@ import CopyButton from '../../CopyButton';
 import { setPairingUri } from '@/redux/walletConnectSlice';
 import { useAppDispatch } from '@/hooks';
 import { isMobile, isIOS } from '@/utils/deviceDetection';
-import { createLogger } from '@/utils/logger';
-
-const logger = createLogger('WalletConnectQR');
-
 interface WalletConnectQRProps {
   pairingUri: string | null;
   isOpen: boolean;
@@ -20,16 +16,9 @@ interface WalletConnectQRProps {
 
 function WalletConnectQR({ pairingUri, isOpen, setIsOpen } : WalletConnectQRProps) {
   const dispatch = useAppDispatch();
-  const [uriCopied, setUriCopied] = useState(false);
   const isMobileDevice = isMobile();
   const isIOSDevice = isIOS();
 
-  const handleCopy = () => {
-    if (pairingUri) {
-      setUriCopied(true);
-      setTimeout(() => setUriCopied(false), 2000);
-    }
-  };
 
   const handleCancel = () => {
     dispatch(setPairingUri(null));
@@ -88,11 +77,7 @@ function WalletConnectQR({ pairingUri, isOpen, setIsOpen } : WalletConnectQRProp
                   <textarea
                     readOnly
                     value={pairingUri}
-                    className={`w-full p-3 text-xs font-mono bg-brandDark/10 dark:bg-brandLight/10 border-2 ${
-                      uriCopied 
-                        ? 'border-green-500 dark:border-green-500 shadow-lg shadow-green-500/20' 
-                        : 'border-brandDark/20 dark:border-brandLight/20'
-                    } rounded-lg text-brandDark dark:text-brandLight resize-none focus:outline-none focus:ring-2 focus:ring-brandDark/20 dark:focus:ring-brandLight/20 transition-all duration-300`}
+                    className="w-full p-3 text-xs font-mono bg-brandDark/10 dark:bg-brandLight/10 border-2 border-brandDark/20 dark:border-brandLight/20 rounded-lg text-brandDark dark:text-brandLight resize-none focus:outline-none focus:ring-2 focus:ring-brandDark/20 dark:focus:ring-brandLight/20 transition-all duration-300"
                     rows={isIOSDevice ? 6 : 4}
                     onClick={(e) => {
                       e.currentTarget.select();
@@ -116,12 +101,12 @@ function WalletConnectQR({ pairingUri, isOpen, setIsOpen } : WalletConnectQRProp
             {/* Action Buttons */}
             <div className="flex flex-col gap-2 w-full">
               <CopyButton 
-                disabled={!Boolean(pairingUri)} 
+                 disabled={!pairingUri}
                 copyText={pairingUri ? pairingUri : ''} 
                 height="40px"
                 variant={isMobileDevice ? undefined : undefined}
               >
-                {uriCopied ? 'Copied!' : 'Copy URI'}
+                Copy URI
               </CopyButton>
               
               <button 

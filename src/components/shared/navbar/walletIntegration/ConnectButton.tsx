@@ -67,9 +67,9 @@ function ConnectButton({ connectText = "Manage Wallet", className = "", walletCo
     // CNSName is only ever null if it hasn't ever been fetched (if no name fetched, it's an empty string)
     // If CNSName hasn't previously been fetched set it in Redux
     const shouldFetch = CNSName === null;
-    const { data, error, isLoading } = useSWR(shouldFetch && address, () => getCNSNameApiCall(address || ''),
+    useSWR(shouldFetch && address, () => getCNSNameApiCall(address || ''),
      {
-      onSuccess(data, key, config) {
+      onSuccess(data) {
         dispatch(setCNSName(data));
       },
       onError: (error) => {
@@ -95,7 +95,7 @@ function ConnectButton({ connectText = "Manage Wallet", className = "", walletCo
         <>
             <button onClick={() => setIsWalletModalOpen(true)} className={buttonClassName}>
                 {(connectedWallet && displayWalletImage && isWalletConnectActuallyConnected) && <SafeImage src={displayWalletImage} width={20} height={20} alt={`${walletName} wallet logo`} className="rounded-full w-5 h-5" />}
-                {!connectedWallet || !isWalletConnectActuallyConnected ? connectText : !!CNSName ? CNSName : displayAddress()}
+                {!connectedWallet || !isWalletConnectActuallyConnected ? connectText : (CNSName || displayAddress())}
             </button>
             <ConnectWalletModal
               isOpen={isWalletModalOpen}

@@ -10,9 +10,6 @@ import { type RootState } from '@/redux/store';
 import { setPairingUri } from '@/redux/walletConnectSlice';
 import { useAppDispatch } from '@/hooks';
 import { isIOS } from '@/utils/deviceDetection';
-import { createLogger } from '@/utils/logger';
-
-const logger = createLogger('CustomWalletConnectModal');
 
 interface CustomWalletConnectModalProps {
   isOpen: boolean;
@@ -34,9 +31,6 @@ function CustomWalletConnectModal({ isOpen, onClose }: CustomWalletConnectModalP
     toast.error('Connection cancelled');
   };
 
-  const handleCopySuccess = () => {
-    toast.success('URI copied to clipboard!');
-  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -144,7 +138,7 @@ function CustomWalletConnectModal({ isOpen, onClose }: CustomWalletConnectModalP
                       {/* Action Buttons - Glassmorphism Style */}
                       <div className="w-full flex flex-col gap-2 sm:gap-3">
                         <CopyButton
-                          disabled={!Boolean(pairingUri)}
+                          disabled={!pairingUri}
                           copyText={pairingUri ? pairingUri : ''}
                           height="44px"
                         >
