@@ -109,18 +109,74 @@ import '@chia/wallet-connect/styles';
 
 #### 2. Configure Tailwind CSS (if using Tailwind)
 
-Add the package to your Tailwind config so it can process the component classes:
+**Option A: Merge the package's Tailwind config (Recommended)**
+
+Import and merge the package's Tailwind configuration to ensure all styles and theme extensions are included:
+
+```js
+// tailwind.config.js
+const packageConfig = require('@chia/wallet-connect/tailwind.config');
+
+module.exports = {
+  ...packageConfig,
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
+  ],
+  // You can extend the theme further if needed
+  theme: {
+    ...packageConfig.theme,
+    extend: {
+      ...packageConfig.theme.extend,
+      // Your custom extensions
+    },
+  },
+}
+```
+
+**Option B: Manual configuration**
+
+If you prefer not to merge the config, manually add the package to your Tailwind content paths and include the theme extensions:
 
 ```js
 // tailwind.config.js
 module.exports = {
+  darkMode: 'class', // Required for dark mode support
   content: [
     './src/**/*.{js,ts,jsx,tsx}',
-    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Add this
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
   ],
-  // ... rest of your config
+  theme: {
+    extend: {
+      colors: {
+        brandDark: '#526e78',
+        brandLight: '#EFF4F7',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 }
+        }
+      },
+      animation: {
+        fadeIn: 'fadeIn .3s ease-in-out',
+      },
+    },
+  },
+  plugins: [],
 }
 ```
+
+**Important Notes:**
+- The `content` array **must** include the package's dist files so Tailwind can scan for class names
+- The `darkMode: 'class'` setting is required for proper dark mode support
+- Make sure your PostCSS config includes Tailwind and Autoprefixer
 
 #### 3. Setup Redux Provider
 
@@ -258,9 +314,12 @@ NEXT_PUBLIC_CHIA_NETWORK=testnet
 
 ### Styling
 
-Import the styles in your app:
+#### Import Styles
+
+Import the package styles in your app's main entry point:
 
 ```tsx
+// In your _app.tsx, layout.tsx, or main.tsx
 import '@chia/wallet-connect/styles';
 ```
 
@@ -269,6 +328,31 @@ Or if using CSS modules:
 ```css
 @import '@chia/wallet-connect/styles';
 ```
+
+#### Troubleshooting Styling Issues
+
+If styles are not appearing correctly:
+
+1. **Verify CSS import**: Make sure you've imported the styles in your main entry point
+2. **Check Tailwind content paths**: Ensure your `tailwind.config.js` includes the package's dist files:
+   ```js
+   content: [
+     // ... your paths
+     './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}',
+   ]
+   ```
+3. **Verify PostCSS config**: Ensure your `postcss.config.js` includes Tailwind:
+   ```js
+   module.exports = {
+     plugins: {
+       tailwindcss: {},
+       autoprefixer: {},
+     },
+   }
+   ```
+4. **Rebuild Tailwind**: After updating your config, restart your dev server and rebuild
+5. **Check dark mode**: If using dark mode, ensure `darkMode: 'class'` is set in your Tailwind config
+6. **Merge package config**: Use Option A in the setup section to automatically include all required theme extensions
 
 ## Supported Wallets
 

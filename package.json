@@ -8,6 +8,7 @@
   "files": [
     "dist",
     "src/styles",
+    "tailwind.config.js",
     "README.md",
     "LICENSE",
     "USAGE.md"
@@ -18,7 +19,8 @@
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./styles": "./src/styles/globals.css"
+    "./styles": "./src/styles/globals.css",
+    "./tailwind.config": "./tailwind.config.js"
   },
   "scripts": {
     "dev": "cd demo && next dev",

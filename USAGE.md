@@ -7,14 +7,71 @@
 ```bash
 npm install @chia/wallet-connect
 ```
-### 2. Setup Redux Provider
+### 2. Import Styles
+
+```tsx
+// _app.tsx or App.tsx
+import '@chia/wallet-connect/styles';
+```
+
+### 3. Configure Tailwind CSS (Required if using Tailwind)
+
+**Quick Setup (Recommended):**
+
+```js
+// tailwind.config.js
+const packageConfig = require('@chia/wallet-connect/tailwind.config');
+
+module.exports = {
+  ...packageConfig,
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Required!
+  ],
+}
+```
+
+**Manual Setup:**
+
+```js
+// tailwind.config.js
+module.exports = {
+  darkMode: 'class',
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@chia/wallet-connect/dist/**/*.{js,ts,jsx,tsx}', // Required!
+  ],
+  theme: {
+    extend: {
+      colors: {
+        brandDark: '#526e78',
+        brandLight: '#EFF4F7',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 }
+        }
+      },
+      animation: {
+        fadeIn: 'fadeIn .3s ease-in-out',
+      },
+    },
+  },
+}
+```
+
+### 4. Setup Redux Provider
 
 ```tsx
 // _app.tsx or App.tsx
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from '@chia/wallet-connect';
-import '@chia/wallet-connect/styles';
 
 export default function App({ Component, pageProps }) {
   return (
@@ -27,7 +84,7 @@ export default function App({ Component, pageProps }) {
 }
 ```
 
-### 3. Use Components
+### 5. Use Components
 
 ```tsx
 import { ConnectButton } from '@chia/wallet-connect';
