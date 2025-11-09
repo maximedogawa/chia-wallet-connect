@@ -11,7 +11,7 @@ A WalletConnect integration plugin for the Chia blockchain. This plugin provides
 - **Address Management**: Get and display wallet addresses
 - **Asset Management**: Add CAT tokens to connected wallets
 - **Offer Generation**: Generate offers for Chia transactions
-- **Dark Mode Support**: Built-in theme support
+- **Dark Mode Support**: Full dark/light mode support - all components automatically adapt to theme changes
 
 ## Getting Started
 
@@ -178,7 +178,64 @@ module.exports = {
 - The `darkMode: 'class'` setting is required for proper dark mode support
 - Make sure your PostCSS config includes Tailwind and Autoprefixer
 
-#### 3. Setup Redux Provider
+#### 3. Dark Mode Support
+
+The package includes full dark mode support out of the box. Components automatically adapt to dark mode when the `dark` class is present on the `<html>` or `<body>` element.
+
+**Enable Dark Mode:**
+
+```tsx
+// Toggle dark mode by adding/removing the 'dark' class
+// Option 1: Manual toggle
+const toggleDarkMode = () => {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+};
+
+// Option 2: React hook example
+import { useEffect, useState } from 'react';
+
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Check localStorage or system preference
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = stored === 'dark' || (!stored && prefersDark);
+    
+    setIsDark(shouldBeDark);
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const toggle = () => {
+    const newValue = !isDark;
+    setIsDark(newValue);
+    if (newValue) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  return [isDark, toggle] as const;
+}
+```
+
+**All components automatically support dark mode:**
+- `ConnectButton` - Adapts colors for dark/light themes
+- `ConnectWalletModal` - Full dark mode styling
+- `Modal` - Dark background and text colors
+- `WalletConnectQR` - Dark mode compatible QR display
+- All other components - Fully theme-aware
+
+#### 4. Setup Redux Provider
 
 Wrap your app with the Redux Provider:
 
@@ -351,8 +408,17 @@ If styles are not appearing correctly:
    }
    ```
 4. **Rebuild Tailwind**: After updating your config, restart your dev server and rebuild
-5. **Check dark mode**: If using dark mode, ensure `darkMode: 'class'` is set in your Tailwind config
+5. **Check dark mode**: If using dark mode, ensure `darkMode: 'class'` is set in your Tailwind config and the `dark` class is on your `<html>` element
 6. **Merge package config**: Use Option A in the setup section to automatically include all required theme extensions
+
+#### Dark Mode Troubleshooting
+
+If dark mode isn't working:
+
+1. **Verify `dark` class**: Check that `document.documentElement.classList.contains('dark')` returns `true` when dark mode should be active
+2. **Check Tailwind config**: Ensure `darkMode: 'class'` is set in your Tailwind config (included when merging package config)
+3. **Inspect components**: Use browser dev tools to verify `dark:` classes are being applied
+4. **Clear cache**: Sometimes Tailwind needs a rebuild to recognize dark mode classes
 
 ## Supported Wallets
 

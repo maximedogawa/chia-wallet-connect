@@ -65,7 +65,46 @@ module.exports = {
 }
 ```
 
-### 4. Setup Redux Provider
+### 4. Dark Mode Support (Optional)
+
+The package fully supports dark mode! Components automatically adapt when the `dark` class is on the `<html>` element.
+
+**Quick Setup:**
+
+```tsx
+// In your _app.tsx or layout component
+import { useEffect } from 'react';
+
+export default function App({ Component, pageProps }) {
+  useEffect(() => {
+    // Check for saved theme preference or default to system preference
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (stored === 'dark' || (!stored && prefersDark)) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  return <Component {...pageProps} />;
+}
+```
+
+**Toggle Dark Mode:**
+
+```tsx
+// Simple toggle function
+const toggleDarkMode = () => {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', 
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
+};
+```
+
+All components (`ConnectButton`, `Modal`, `ConnectWalletModal`, etc.) automatically support dark mode - no additional configuration needed!
+
+### 5. Setup Redux Provider
 
 ```tsx
 // _app.tsx or App.tsx
@@ -84,7 +123,7 @@ export default function App({ Component, pageProps }) {
 }
 ```
 
-### 5. Use Components
+### 6. Use Components
 
 ```tsx
 import { ConnectButton } from '@chia/wallet-connect';
