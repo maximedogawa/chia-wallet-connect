@@ -23,10 +23,7 @@
     "./tailwind.config": "./tailwind.config.js"
   },
   "scripts": {
-    "dev": "cd demo && next dev",
-    "build": "cd demo && next build",
     "build:package": "tsc -p tsconfig.build.json && npx tsc-alias -p tsconfig.build.json",
-    "start": "cd demo && next start",
     "lint": "eslint . --max-warnings 20",
     "lint:fix": "eslint . --fix",
     "prepublishOnly": "npm run build:package",
