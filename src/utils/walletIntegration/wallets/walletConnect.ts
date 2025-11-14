@@ -751,27 +751,39 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       }
       return address;
     } catch (error: unknown) {
-      if (isWalletConnectError(error) && error.code === 4001 && error.message === "Unsupported method: chia_getCurrentAddress") {
+      // Check for various error formats that indicate the method is not supported
+      const isUnsupportedMethod = isWalletConnectError(error) && 
+        error.code === 4001 && 
+        (error.message === "Unsupported method: chia_getCurrentAddress" ||
+         error.message.includes("Missing or invalid") && error.message.includes("chia_getCurrentAddress") ||
+         error.message.includes("request() method: chia_getCurrentAddress"));
+      
+      if (isUnsupportedMethod) {
         logger.debug('getAddress: chia_getCurrentAddress not supported, trying Sage method chia_getAddress');
         logger.info("Sage wallet detected, using chia_getAddress method");
 
-        const request = (signClient as SignClient).request<{address: string}>({
-          topic: topic as string,
-          chainId: this.chainId,
-          request: {
-            method: "chia_getAddress",
-            params: {},
-          },
-        });
-        const response = await request;
-        
-        logger.debug('getAddress: Sage address response received:', response);
-        const address = response.address;
-        if (address) {
-          logger.debug('getAddress: Success! Sage address retrieved:', address);
-          store.dispatch(setAddress(address));
+        try {
+          const request = (signClient as SignClient).request<{address: string}>({
+            topic: topic as string,
+            chainId: this.chainId,
+            request: {
+              method: "chia_getAddress",
+              params: {},
+            },
+          });
+          const response = await request;
+          
+          logger.debug('getAddress: Sage address response received:', response);
+          const address = response.address;
+          if (address) {
+            logger.debug('getAddress: Success! Sage address retrieved:', address);
+            store.dispatch(setAddress(address));
+          }
+          return address;
+        } catch (sageError) {
+          logger.error('getAddress: Sage method also failed:', sageError);
+          return null;
         }
-        return address;
       }
       logger.error('getAddress: Error getting address:', error);
       return null;

@@ -5,6 +5,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { Toaster } from 'react-hot-toast';
 import store, { persistor } from '../../dist/state/store';
 import WalletManager from '@maximEdogawa/chia-wallet-connect-react/utils/walletIntegration/walletManager';
+import { restoreConnectionStateImmediate } from '@maximEdogawa/chia-wallet-connect-react/hooks/useWalletConnectRestore';
 import Navbar from '@maximEdogawa/chia-wallet-connect-react/components/shared/navbar/Navbar';
 
 export default function ClientApp({ Component, pageProps }: AppProps) {
@@ -36,7 +37,16 @@ export default function ClientApp({ Component, pageProps }: AppProps) {
 
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+      <PersistGate 
+        loading={null} 
+        persistor={persistor}
+        onBeforeLift={() => {
+          // Restore WalletConnect connection state after Redux rehydration completes
+          restoreConnectionStateImmediate().catch((error) => {
+            console.error('Failed to restore WalletConnect connection state:', error);
+          });
+        }}
+      >
         <div className="min-h-screen relative">
           <Navbar theme={theme} setTheme={setTheme} />
           <Toaster position="bottom-right" />

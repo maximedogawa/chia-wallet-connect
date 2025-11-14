@@ -19,6 +19,14 @@ export { default as store, persistor } from './state/store';
 export type { RootState, AppDispatch } from './state/store';
 export { useAppDispatch, useAppSelector } from './hooks';
 
+// Connection state hooks
+export { useWalletConnectionState } from './hooks/useWalletConnectionState';
+export { useWalletConnectRestore, restoreConnectionStateImmediate } from './hooks/useWalletConnectRestore';
+
+// Connection state restoration utility
+export { restoreConnectionState } from './utils/walletIntegration/restoreConnectionState';
+export type { RestoreConnectionStateOptions } from './utils/walletIntegration/restoreConnectionState';
+
 // Redux slices and actions
 export { setConnectedWallet, setAddress, setCNSName } from './state/walletSlice';
 export {

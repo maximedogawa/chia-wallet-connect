@@ -82,6 +82,29 @@ yarn start
 pnpm start
 ```
 
+## Accessing Wallet Connection State
+
+To access and monitor the wallet connection state in your app, see the [Wallet Connection State Documentation](./WALLET_CONNECTION_STATE.md).
+
+The package provides:
+- `useWalletConnectionState()` hook - Easy access to connection state in React components
+- Direct Redux store access - For non-React code or advanced use cases
+- Automatic state persistence - Connection state survives page refreshes
+
+Quick example:
+```tsx
+import { useWalletConnectionState } from '@chia/wallet-connect';
+
+function MyComponent() {
+  const { isConnected, address, connectedWallet } = useWalletConnectionState();
+  
+  if (isConnected) {
+    return <div>Connected to {connectedWallet} at {address}</div>;
+  }
+  return <div>Not connected</div>;
+}
+```
+
 ## Usage as a Package/Plugin
 
 ### Installation

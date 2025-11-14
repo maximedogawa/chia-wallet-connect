@@ -64,6 +64,8 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage,
+  // walletConnect and wallet slices are persisted (not in blacklist)
+  // This ensures connection state survives page refreshes
   blacklist: ['completeWithWallet', 'settingsModal', 'globalOnLoadData'],
 };
 
