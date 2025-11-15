@@ -1,7 +1,6 @@
 import { bech32m } from 'bech32';
 import axios from 'axios';
 
-// Token model
 export interface Token {
     asset_id: string;
     hidden_puzzle_hash: string | null;
@@ -10,8 +9,6 @@ export interface Token {
     image_url: string;
     verified: boolean;
 }
-  
-// Pair model
 export interface Pair {
     pair_id: string;
     asset_id: string;

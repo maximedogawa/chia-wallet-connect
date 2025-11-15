@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 
 import SafeImage from '../../SafeImage';
@@ -6,8 +6,8 @@ import CrossIcon from '../../icons/CrossIcon';
 
 import FingerprintListbox from './FingerprintListbox';
 
-import { selectSession, setSelectedFingerprint } from '@/redux/walletConnectSlice';
-import { type RootState } from '@/redux/store';
+import { selectSession, setSelectedFingerprint } from '@/state/walletConnectSlice';
+import { type RootState } from '@/state/store';
 import WalletManager from '@/utils/walletIntegration/walletManager';
 import { useAppDispatch } from '@/hooks';
 import WalletConnect from "@/utils/walletIntegration/wallets/walletConnect";
@@ -28,8 +28,12 @@ function WalletConnectSession({ img, name, topic }: WalletConnectSession) {
 
   const sessions = useSelector((state: RootState) => state.walletConnect.sessions);
   const selectedSession = useSelector((state: RootState) => state.walletConnect.selectedSession);
-  const selectedFingerprint = useSelector((state: RootState) => state.walletConnect.selectedFingerprint)[topic];
-  const isSelected = selectedSession ? selectedSession.topic === topic : false;
+  const selectedFingerprintMap = useSelector((state: RootState) => state.walletConnect.selectedFingerprint);
+  const selectedFingerprint = selectedFingerprintMap[topic];
+  // Compute isSelected reactively
+  const isSelected = useMemo(() => {
+    return selectedSession ? selectedSession.topic === topic : false;
+  }, [selectedSession, topic]);
 
 
   // Fingerprint management
@@ -68,6 +72,12 @@ function WalletConnectSession({ img, name, topic }: WalletConnectSession) {
     dispatch(selectSession(topic));
   }
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
+    await walletConnect.disconnectSession(topic);
+    // updateSessions is already called in disconnectSession, but ensure UI updates
+  }
+
   return (
     <li onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} onClick={handleClick} className={`${isSelected && isConnectedWalletWalletConnect ? 'bg-green-700/20 text-green-700' : 'bg-brandDark/10'} ${isHovering && !isSelected ? 'bg-green-700/10 text-green-700': ''} select-none rounded-xl px-8 py-4 cursor-pointer hover:opacity-80 flex justify-between items-center w-full h-16 animate-fadeIn`}>
       <div className="flex gap-4 items-center">
@@ -85,7 +95,7 @@ function WalletConnectSession({ img, name, topic }: WalletConnectSession) {
           className={`bg-red-700/80 hover:bg-red-700 rounded py-1 px-1 text-xs text-brandLight transition-opacity`}
           onMouseEnter={() => setIsHovering(false)}
           onMouseLeave={() => setIsHovering(true)}
-          onClick={() => walletConnect.disconnectSession(topic)}
+          onClick={handleDelete}
         >
           <CrossIcon className='fill-white' />
         </button>

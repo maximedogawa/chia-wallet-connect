@@ -6,8 +6,8 @@ import toast from 'react-hot-toast';
 
 import CopyButton from '../../CopyButton';
 
-import { type RootState } from '@/redux/store';
-import { setPairingUri } from '@/redux/walletConnectSlice';
+import { type RootState } from '@/state/store';
+import { setPairingUri } from '@/state/walletConnectSlice';
 import { useAppDispatch } from '@/hooks';
 import { isIOS } from '@/utils/deviceDetection';
 

@@ -1,0 +1,16 @@
+# Bun configuration file
+# This file configures Bun-specific settings for the project
+
+[install]
+# Use npm registry
+registry = "https://registry.npmjs.org/"
+
+# Auto-install peer dependencies
+peer = true
+
+# Production mode by default
+production = false
+
+[install.scopes]
+# Scope-specific registry configuration if needed
+

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
 
-import { RootState } from "@/redux/store";
+import { RootState } from "@/state/store";
 import WalletManager from "@/utils/walletIntegration/walletManager";
 
 interface AddAssetButtonProps {

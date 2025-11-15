@@ -7,7 +7,6 @@
     "dist/**",
     "public/**",
     "demo/**",
-    "examples/**",
     "*.config.js",
     "*.config.ts",
     "*.config.mjs",

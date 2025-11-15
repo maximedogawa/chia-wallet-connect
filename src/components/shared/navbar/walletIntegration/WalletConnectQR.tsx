@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 import CopyButton from '../../CopyButton';
 
-import { setPairingUri } from '@/redux/walletConnectSlice';
+import { setPairingUri } from '@/state/walletConnectSlice';
 import { useAppDispatch } from '@/hooks';
 import { isMobile, isIOS } from '@/utils/deviceDetection';
 interface WalletConnectQRProps {

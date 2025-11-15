@@ -8,13 +8,12 @@
   },
   "include": [
     "pages/**/*.ts",
-    "pages/**/*.tsx",
-    "../src/**/*.ts",
-    "../src/**/*.tsx"
+    "pages/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
-    "../node_modules"
+    "../node_modules",
+    "../src"
   ]
 }
 

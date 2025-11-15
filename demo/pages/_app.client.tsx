@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import dynamic from 'next/dynamic';
 import { Toaster } from 'react-hot-toast';
-import store, { persistor } from '../../src/redux/store';
-import WalletManager from '../../src/utils/walletIntegration/walletManager';
-
-const Navbar = dynamic(() => import('../../src/components/shared/navbar/Navbar'), {
-  ssr: false,
-});
+import { 
+  store, 
+  persistor, 
+  WalletManager, 
+  restoreConnectionStateImmediate 
+} from '@maximedogawa/chia-wallet-connect-react';
+import Navbar from '../../dist/components/shared/navbar/Navbar';
 
 export default function ClientApp({ Component, pageProps }: AppProps) {
   const [theme, setTheme] = useState<"dark" | "light" | "auto">("auto");
@@ -40,7 +40,16 @@ export default function ClientApp({ Component, pageProps }: AppProps) {
 
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+      <PersistGate 
+        loading={null} 
+        persistor={persistor}
+        onBeforeLift={() => {
+          // Restore WalletConnect connection state after Redux rehydration completes
+          restoreConnectionStateImmediate().catch((error) => {
+            console.error('Failed to restore WalletConnect connection state:', error);
+          });
+        }}
+      >
         <div className="min-h-screen relative">
           <Navbar theme={theme} setTheme={setTheme} />
           <Toaster position="bottom-right" />

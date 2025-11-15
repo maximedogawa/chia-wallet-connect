@@ -8,7 +8,6 @@ const withPWA = require('next-pwa')({
 
 module.exports = withPWA({
   reactStrictMode: true,
-  // Set the workspace root to silence the multiple lockfiles warning
   outputFileTracingRoot: require('path').resolve(__dirname, '..'),
   turbopack: {},
   images: {

@@ -3,8 +3,8 @@ import toast from 'react-hot-toast';
 import { generateOffer, walletNamesType } from './walletIntegrationInterface';
 import WalletConnect from './wallets/walletConnect';
 
-import store, { RootState } from '@/redux/store';
-import { setConnectedWallet } from '@/redux/walletSlice';
+import store, { RootState } from '@/state/store';
+import { setConnectedWallet } from '@/state/walletSlice';
 import { createLogger } from '@/utils/logger';
 import { type WalletConnectMetadata } from '@/constants/wallet-connect';
 
@@ -34,15 +34,20 @@ class WalletManager {
         logger.debug("Getting address...");
         const address = await this.getAddress(wallet);
         logger.debug("Address retrieved:", address);
-        const image = this.getImage(wallet);
-        const name = this.getName(wallet);
-        const setConnectedWalletInfo = {
-          wallet,
-          address,
-          image,
-          name
+        // Only set connected wallet if we got an address (for WalletConnect, this means a session is active)
+        if (address || wallet !== "WalletConnect") {
+          const image = this.getImage(wallet);
+          const name = this.getName(wallet);
+          const setConnectedWalletInfo = {
+            wallet,
+            address,
+            image,
+            name
+          }
+          store.dispatch(setConnectedWallet(setConnectedWalletInfo))
+        } else {
+          logger.debug("No address retrieved for WalletConnect, session may not be fully connected");
         }
-        store.dispatch(setConnectedWallet(setConnectedWalletInfo))
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.message) {

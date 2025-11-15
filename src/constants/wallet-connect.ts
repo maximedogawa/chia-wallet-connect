@@ -18,33 +18,33 @@ export const CHIA_CHAIN_ID = getChainId()
 // Helper to parse icons from environment variable (comma-separated string or single string)
 // Default: WalletConnect icon from public/assets
 const getMetadataIcons = (): string[] => {
-  const iconsEnv = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_ICONS || 
+  const iconsEnv = process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_ICONS ||
                    process.env.WALLET_CONNECT_METADATA_ICONS;
-  
+
   if (iconsEnv) {
-    return iconsEnv.includes(',') 
+    return iconsEnv.includes(',')
       ? iconsEnv.split(',').map(icon => icon.trim())
       : [iconsEnv];
   }
-  
+
   // Default: Use WalletConnect icon
-  const defaultIcon = typeof window !== 'undefined' 
+  const defaultIcon = typeof window !== 'undefined'
     ? `${window.location.origin}/assets/walletconnect.svg`
     : '/assets/walletconnect.svg';
-  
+
   return [defaultIcon];
 };
 
 // Metadata configuration (can be overridden via environment variables)
 export const CHIA_METADATA = {
-  name: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_NAME || 
-        process.env.WALLET_CONNECT_METADATA_NAME || 
+  name: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_NAME ||
+        process.env.WALLET_CONNECT_METADATA_NAME ||
         'Wallet Connect',
-  description: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_DESCRIPTION || 
-               process.env.WALLET_CONNECT_METADATA_DESCRIPTION || 
+  description: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_DESCRIPTION ||
+               process.env.WALLET_CONNECT_METADATA_DESCRIPTION ||
                'Wallet Connect for Chia blockchain',
-  url: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_URL || 
-       process.env.WALLET_CONNECT_METADATA_URL || 
+  url: process.env.NEXT_PUBLIC_WALLET_CONNECT_METADATA_URL ||
+       process.env.WALLET_CONNECT_METADATA_URL ||
        (typeof window !== 'undefined' ? window.location.origin : 'https://example.com'),
   icons: getMetadataIcons(),
 }
@@ -81,15 +81,15 @@ export const REQUIRED_NAMESPACES = {
 // Sign client configuration
 export const SIGN_CLIENT_CONFIG = {
   projectId: process.env.WALLET_CONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
-  relayUrl: process.env.WALLET_CONNECT_RELAY_URL || 
-            process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || 
+  relayUrl: process.env.WALLET_CONNECT_RELAY_URL ||
+            process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL ||
             'wss://relay.walletconnect.com',
   metadata: CHIA_METADATA,
   // Logger level: "error" | "warn" | "info" | "debug" | "trace"
   // "error" is recommended - filters out non-critical internal WalletConnect errors
   // (pairing cleanup, history restore, etc.) that don't affect functionality
-  logger: (process.env.WALLET_CONNECT_LOGGER || 
-           process.env.NEXT_PUBLIC_WALLET_CONNECT_LOGGER || 
+  logger: (process.env.WALLET_CONNECT_LOGGER ||
+           process.env.NEXT_PUBLIC_WALLET_CONNECT_LOGGER ||
            'error') as 'error' | 'warn' | 'info' | 'debug' | 'trace',
 }
 
@@ -102,12 +102,12 @@ export interface WalletConnectMetadata {
 }
 
 // Default WalletConnect icon (can be overridden via environment variable or props)
-export const WALLET_CONNECT_ICON = process.env.NEXT_PUBLIC_WALLET_CONNECT_ICON || 
+export const WALLET_CONNECT_ICON = process.env.NEXT_PUBLIC_WALLET_CONNECT_ICON ||
                                     '/assets/walletconnect.svg';
 
 // Default wallet image (alias for backward compatibility)
-export const DEFAULT_WALLET_IMAGE = process.env.NEXT_PUBLIC_WALLET_CONNECT_DEFAULT_IMAGE || 
-                                     process.env.WALLET_CONNECT_DEFAULT_IMAGE || 
+export const DEFAULT_WALLET_IMAGE = process.env.NEXT_PUBLIC_WALLET_CONNECT_DEFAULT_IMAGE ||
+                                     process.env.WALLET_CONNECT_DEFAULT_IMAGE ||
                                      WALLET_CONNECT_ICON;
 
 // WalletConnect Modal configuration (for desktop)
@@ -119,7 +119,7 @@ export const getModalConfig = () => {
   if (!projectId) {
     return null;
   }
-  
+
   // Detect current theme from document (matches Tailwind's dark mode)
   let themeMode: 'light' | 'dark' = 'light';
   if (typeof window !== 'undefined') {
@@ -130,10 +130,16 @@ export const getModalConfig = () => {
     const envTheme = process.env.NEXT_PUBLIC_WALLET_CONNECT_THEME;
     themeMode = (envTheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
   }
-  
+
   return {
     projectId,
     chains: [CHIA_CHAIN_ID],
     themeMode,
+    themeVariables: {
+      '--wcm-z-index': '9999',
+      '--wcm-background-color': themeMode === 'dark' ? '#1f2937' : '#ffffff',
+      '--wcm-accent-color': '#3b82f6',
+      '--wcm-accent-fill-color': '#ffffff',
+    },
   };
 };

@@ -5,16 +5,16 @@ import { WalletConnectModal } from '@walletconnect/modal';
 import { toast } from 'react-hot-toast';
 import pino from 'pino';
 
-import store from '../../../redux/store';
-import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationInterface';
+import WalletIntegrationInterface, { generateOffer } from '../walletIntegrationInterface.js';
 
-import { setAddress, setConnectedWallet } from '@/redux/walletSlice';
-import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory } from '@/redux/walletConnectSlice';
-import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/redux/completeWithWalletSlice';
-import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata, getModalConfig } from '@/constants/wallet-connect';
-import { SageMethods } from '@/constants/sage-methods';
-import { createLogger } from '@/utils/logger';
-import { isIOS } from '@/utils/deviceDetection';
+import store from '@/state/store.js';
+import { setAddress, setConnectedWallet } from '@/state/walletSlice.js';
+import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory, setSelectedFingerprint } from '@/state/walletConnectSlice.js';
+import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/state/completeWithWalletSlice.js';
+import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata, getModalConfig } from '@/constants/wallet-connect.js';
+import { SageMethods } from '@/constants/sage-methods.js';
+import { createLogger } from '@/utils/logger.js';
+import { isIOS } from '@/utils/deviceDetection.js';
 
 const logger = createLogger('WalletConnect');
 
@@ -143,7 +143,42 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
   }
 
   async connect(): Promise<boolean> {
-    return true;
+    // For WalletConnect, check if there are existing sessions
+    // If there are sessions but no selected session, select the first one
+    const state = store.getState();
+    const sessions = state.walletConnect.sessions;
+    const selectedSession = state.walletConnect.selectedSession;
+    
+    if (sessions.length > 0 && !selectedSession) {
+      // Select the first available session
+      const firstSession = sessions[0];
+      store.dispatch(selectSession(firstSession.topic));
+      
+      // Ensure fingerprint is set for this session
+      if (!state.walletConnect.selectedFingerprint[firstSession.topic]) {
+        const defaultFingerprint = Number(firstSession.namespaces.chia.accounts[0].split(":")[2]);
+        store.dispatch(setSelectedFingerprint({ topic: firstSession.topic, selectedFingerprint: defaultFingerprint }));
+        logger.debug('connect: Set default fingerprint for session', { topic: firstSession.topic, fingerprint: defaultFingerprint });
+      }
+      
+      logger.debug('connect: Selected first available session', { topic: firstSession.topic });
+      return true;
+    }
+    
+    // If there's already a selected session, ensure it has a fingerprint
+    if (selectedSession) {
+      if (!state.walletConnect.selectedFingerprint[selectedSession.topic]) {
+        const defaultFingerprint = Number(selectedSession.namespaces.chia.accounts[0].split(":")[2]);
+        store.dispatch(setSelectedFingerprint({ topic: selectedSession.topic, selectedFingerprint: defaultFingerprint }));
+        logger.debug('connect: Set default fingerprint for existing session', { topic: selectedSession.topic, fingerprint: defaultFingerprint });
+      }
+      logger.debug('connect: Session already selected', { topic: selectedSession.topic });
+      return true;
+    }
+    
+    // No sessions available - user needs to call connectSession() first
+    logger.debug('connect: No sessions available, connectSession() must be called first');
+    return false;
   }
 
   async connectSession(): Promise<void | SessionTypes.Struct> {  
@@ -716,27 +751,39 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       }
       return address;
     } catch (error: unknown) {
-      if (isWalletConnectError(error) && error.code === 4001 && error.message === "Unsupported method: chia_getCurrentAddress") {
+      // Check for various error formats that indicate the method is not supported
+      const isUnsupportedMethod = isWalletConnectError(error) && 
+        error.code === 4001 && 
+        (error.message === "Unsupported method: chia_getCurrentAddress" ||
+         error.message.includes("Missing or invalid") && error.message.includes("chia_getCurrentAddress") ||
+         error.message.includes("request() method: chia_getCurrentAddress"));
+      
+      if (isUnsupportedMethod) {
         logger.debug('getAddress: chia_getCurrentAddress not supported, trying Sage method chia_getAddress');
         logger.info("Sage wallet detected, using chia_getAddress method");
 
-        const request = (signClient as SignClient).request<{address: string}>({
-          topic: topic as string,
-          chainId: this.chainId,
-          request: {
-            method: "chia_getAddress",
-            params: {},
-          },
-        });
-        const response = await request;
-        
-        logger.debug('getAddress: Sage address response received:', response);
-        const address = response.address;
-        if (address) {
-          logger.debug('getAddress: Success! Sage address retrieved:', address);
-          store.dispatch(setAddress(address));
+        try {
+          const request = (signClient as SignClient).request<{address: string}>({
+            topic: topic as string,
+            chainId: this.chainId,
+            request: {
+              method: "chia_getAddress",
+              params: {},
+            },
+          });
+          const response = await request;
+          
+          logger.debug('getAddress: Sage address response received:', response);
+          const address = response.address;
+          if (address) {
+            logger.debug('getAddress: Success! Sage address retrieved:', address);
+            store.dispatch(setAddress(address));
+          }
+          return address;
+        } catch (sageError) {
+          logger.error('getAddress: Sage method also failed:', sageError);
+          return null;
         }
-        return address;
       }
       logger.error('getAddress: Error getting address:', error);
       return null;
