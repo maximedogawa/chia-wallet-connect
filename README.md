@@ -120,7 +120,7 @@ The package provides several ways to access and monitor the WalletConnect connec
 The easiest way to access connection state in your React components:
 
 ```tsx
-import { useWalletConnectionState } from '@maximEdogawa/chia-wallet-connect-react';
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react';
 
 function MyComponent() {
   const {
@@ -165,8 +165,8 @@ function MyComponent() {
 You can also access the state directly from the Redux store:
 
 ```tsx
-import { store, useAppSelector } from '@maximEdogawa/chia-wallet-connect-react';
-import type { RootState } from '@maximEdogawa/chia-wallet-connect-react';
+import { store, useAppSelector } from '@maximedogawa/chia-wallet-connect-react';
+import type { RootState } from '@maximedogawa/chia-wallet-connect-react';
 
 function MyComponent() {
   // Using useAppSelector hook
@@ -227,7 +227,7 @@ The following state is persisted:
 ### Complete Example
 
 ```tsx
-import { useWalletConnectionState, ConnectButton } from '@maximEdogawa/chia-wallet-connect-react';
+import { useWalletConnectionState, ConnectButton } from '@maximedogawa/chia-wallet-connect-react';
 
 function WalletStatus() {
   const {
@@ -278,13 +278,13 @@ function WalletStatus() {
 Install the package in your project:
 
 ```bash
-npm install @maximEdogawa/chia-wallet-connect-react
+npm install @maximedogawa/chia-wallet-connect-react
 # or
-yarn add @maximEdogawa/chia-wallet-connect-react
+yarn add @maximedogawa/chia-wallet-connect-react
 # or
-pnpm add @maximEdogawa/chia-wallet-connect-react
+pnpm add @maximedogawa/chia-wallet-connect-react
 # or
-bun add @maximEdogawa/chia-wallet-connect-react
+bun add @maximedogawa/chia-wallet-connect-react
 ```
 
 ### Setup
@@ -295,7 +295,7 @@ bun add @maximEdogawa/chia-wallet-connect-react
 
 ```tsx
 // In your _app.tsx, layout.tsx, or main.tsx
-import '@maximEdogawa/chia-wallet-connect-react/styles';
+import '@maximedogawa/chia-wallet-connect-react/styles';
 ```
 
 #### 2. Configure Tailwind CSS (if using Tailwind)
@@ -306,7 +306,7 @@ Import and merge the package's Tailwind configuration to ensure all styles and t
 
 ```js
 // tailwind.config.js
-const packageConfig = require('@maximEdogawa/chia-wallet-connect-react/tailwind.config');
+const packageConfig = require('@maximedogawa/chia-wallet-connect-react/tailwind.config');
 
 module.exports = {
   ...packageConfig,
@@ -315,7 +315,7 @@ module.exports = {
     './pages/**/*.{js,ts,jsx,tsx}',
     './app/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
-    './node_modules/@maximEdogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
+    './node_modules/@maximedogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
   ],
   // You can extend the theme further if needed
   theme: {
@@ -341,7 +341,7 @@ module.exports = {
     './pages/**/*.{js,ts,jsx,tsx}',
     './app/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
-    './node_modules/@maximEdogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
+    './node_modules/@maximedogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}', // Important: Add this
   ],
   theme: {
     extend: {
@@ -433,7 +433,7 @@ Wrap your app with the Redux Provider:
 ```tsx
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from '@maximEdogawa/chia-wallet-connect-react';
+import { store, persistor } from '@maximedogawa/chia-wallet-connect-react';
 
 function App() {
   return (
@@ -451,7 +451,7 @@ function App() {
 #### Use the Connect Button
 
 ```tsx
-import { ConnectButton } from '@maximEdogawa/chia-wallet-connect-react';
+import { ConnectButton } from '@maximedogawa/chia-wallet-connect-react';
 
 function MyComponent() {
   return (
@@ -479,7 +479,7 @@ function MyComponent() {
 #### 3. Use WalletManager Programmatically
 
 ```tsx
-import { WalletManager, useAppSelector } from '@maximEdogawa/chia-wallet-connect-react';
+import { WalletManager, useAppSelector } from '@maximedogawa/chia-wallet-connect-react';
 
 function MyComponent() {
   const walletManager = new WalletManager();
@@ -500,8 +500,8 @@ function MyComponent() {
 #### 4. Access Wallet State
 
 ```tsx
-import { useAppSelector } from '@maximEdogawa/chia-wallet-connect-react';
-import type { RootState } from '@maximEdogawa/chia-wallet-connect-react';
+import { useAppSelector } from '@maximedogawa/chia-wallet-connect-react';
+import type { RootState } from '@maximedogawa/chia-wallet-connect-react';
 
 function WalletInfo() {
   const address = useAppSelector((state: RootState) => state.wallet.address);
@@ -567,13 +567,13 @@ Import the package styles in your app's main entry point:
 
 ```tsx
 // In your _app.tsx, layout.tsx, or main.tsx
-import '@maximEdogawa/chia-wallet-connect-react/styles';
+import '@maximedogawa/chia-wallet-connect-react/styles';
 ```
 
 Or if using CSS modules:
 
 ```css
-@import '@maximEdogawa/chia-wallet-connect-react/styles';
+@import '@maximedogawa/chia-wallet-connect-react/styles';
 ```
 
 #### Troubleshooting Styling Issues
@@ -585,7 +585,7 @@ If styles are not appearing correctly:
    ```js
    content: [
      // ... your paths
-     './node_modules/@maximEdogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}',
+     './node_modules/@maximedogawa/chia-wallet-connect-react/dist/**/*.{js,ts,jsx,tsx}',
    ]
    ```
 3. **Verify PostCSS config**: Ensure your `postcss.config.js` includes Tailwind:

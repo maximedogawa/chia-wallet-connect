@@ -8,7 +8,7 @@ import {
   persistor, 
   WalletManager, 
   restoreConnectionStateImmediate 
-} from '@maximEdogawa/chia-wallet-connect-react';
+} from '@maximedogawa/chia-wallet-connect-react';
 import Navbar from '../../dist/components/shared/navbar/Navbar';
 
 export default function ClientApp({ Component, pageProps }: AppProps) {

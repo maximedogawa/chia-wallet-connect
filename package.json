@@ -1,5 +1,5 @@
 {
-  "name": "@maximEdogawa/chia-wallet-connect-react",
+  "name": "@maximedogawa/chia-wallet-connect-react",
   "version": "0.0.1",
   "description": "WalletConnect plugin for Chia blockchain",
   "main": "dist/index.js",

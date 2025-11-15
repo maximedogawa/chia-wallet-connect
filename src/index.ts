@@ -1,5 +1,5 @@
 // Note: Styles must be imported separately by consumers
-// import '@maximEdogawa/chia-wallet-connect-react/styles';
+// import '@maximedogawa/chia-wallet-connect-react/styles';
 
 export { default as ConnectButton } from './components/shared/navbar/walletIntegration/ConnectButton';
 export type { ConnectButtonProps } from './components/shared/navbar/walletIntegration/ConnectButton';
