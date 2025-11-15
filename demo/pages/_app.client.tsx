@@ -3,10 +3,13 @@ import type { AppProps } from 'next/app';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { Toaster } from 'react-hot-toast';
-import store, { persistor } from '../../dist/state/store';
-import WalletManager from '@maximEdogawa/chia-wallet-connect-react/utils/walletIntegration/walletManager';
-import { restoreConnectionStateImmediate } from '@maximEdogawa/chia-wallet-connect-react/hooks/useWalletConnectRestore';
-import Navbar from '@maximEdogawa/chia-wallet-connect-react/components/shared/navbar/Navbar';
+import { 
+  store, 
+  persistor, 
+  WalletManager, 
+  restoreConnectionStateImmediate 
+} from '@maximEdogawa/chia-wallet-connect-react';
+import Navbar from '../../dist/components/shared/navbar/Navbar';
 
 export default function ClientApp({ Component, pageProps }: AppProps) {
   const [theme, setTheme] = useState<"dark" | "light" | "auto">("auto");

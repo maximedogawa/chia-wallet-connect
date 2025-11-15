@@ -1,6 +1,6 @@
 import type { AppProps } from 'next/app';
 import ClientApp from './_app.client';
-import '@maximEdogawa/chia-wallet-connect-react/styles/globals.css';
+import '@maximEdogawa/chia-wallet-connect-react/styles';
 
 export default function App(props: AppProps) {
   if (typeof window === 'undefined') {

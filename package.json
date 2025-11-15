@@ -9,8 +9,7 @@
     "dist",
     "tailwind.config.js",
     "README.md",
-    "LICENSE",
-    "USAGE.md"
+    "LICENSE"
   ],
   "exports": {
     ".": {
@@ -22,8 +21,8 @@
     "./tailwind.config": "./tailwind.config.js"
   },
   "scripts": {
-    "prepare": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && mkdir -p dist/styles && cp src/styles/globals.css dist/styles/globals.css",
-    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && mkdir -p dist/styles && cp src/styles/globals.css dist/styles/globals.css",
+    "prepare": "npm run build",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && mkdir -p dist/styles && cp src/styles/globals.css dist/styles/globals.css && node scripts/generate-dist-package.js",
     "lint": "eslint . --max-warnings 20",
     "lint:fix": "eslint . --fix",
     "prehook": "husky"
@@ -36,8 +35,16 @@
     "crypto",
     "plugin"
   ],
-  "author": "",
+  "author": "MaximEdogawa",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maximEdogawa/chia-wallet-connect.git"
+  },
+  "homepage": "https://github.com/maximEdogawa/chia-wallet-connect#readme",
+  "bugs": {
+    "url": "https://github.com/maximEdogawa/chia-wallet-connect/issues"
+  },
   "peerDependencies": {
     "next": "^16.0.1",
     "react": "^18.0.0",

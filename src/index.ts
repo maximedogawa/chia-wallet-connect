@@ -1,5 +1,5 @@
-// Import package styles - this ensures styles are loaded when the package is used
-import './styles/globals.css';
+// Note: Styles must be imported separately by consumers
+// import '@maximEdogawa/chia-wallet-connect-react/styles';
 
 export { default as ConnectButton } from './components/shared/navbar/walletIntegration/ConnectButton';
 export type { ConnectButtonProps } from './components/shared/navbar/walletIntegration/ConnectButton';
