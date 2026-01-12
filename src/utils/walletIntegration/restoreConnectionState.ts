@@ -152,6 +152,16 @@ export async function restoreConnectionState(
         logger.debug('Address verification failed, but connection is still active', error);
       }
     }
+    
+    // Re-register event listeners after restoring connection state
+    // This ensures that session_ping and other events have listeners registered
+    // after page refresh or browser reopen
+    try {
+      await walletConnect.detectEvents();
+      logger.debug('Event listeners re-registered after connection restoration');
+    } catch (error) {
+      logger.debug('Failed to re-register event listeners, but connection is still valid', error);
+    }
   } catch (error) {
     logger.error('Error during connection state restoration:', error);
     // Don't throw - restoration failure shouldn't break the app
