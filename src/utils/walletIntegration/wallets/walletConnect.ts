@@ -25,6 +25,9 @@ let globalSignClientPromise: Promise<SignClient> | null = null;
 // Singleton WalletConnectModal instance to prevent duplicate custom element registrations
 let globalWalletConnectModal: WalletConnectModal | null = null;
 
+// Singleton MutationObserver for theme changes to prevent multiple observers on the same element
+let globalModalThemeObserver: MutationObserver | null = null;
+
 
 interface wallet {
   data: string
@@ -198,11 +201,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
                 try {
                   globalWalletConnectModal = new WalletConnectModal(modalConfig);
                   logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
-                  // Set up theme observer on the global modal instance
-                  if (this.modalThemeObserver) {
-                    this.modalThemeObserver.disconnect();
+                  // Set up theme observer on the global modal instance (only once)
+                  if (!globalModalThemeObserver) {
+                    this.setupThemeObserver();
                   }
-                  this.setupThemeObserver();
                 } catch (modalError) {
                   logger.error('Failed to initialize WalletConnect modal:', modalError);
                 }
@@ -808,7 +810,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
   /**
    * Set up a MutationObserver to watch for theme changes (dark class on documentElement)
-   * and update the WalletConnect modal theme accordingly
+   * and update the WalletConnect modal theme accordingly.
+   * Uses a global singleton observer to prevent multiple observers on the same element.
    */
   setupThemeObserver() {
     // Use global modal if available, otherwise use instance modal
@@ -817,22 +820,23 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       return;
     }
 
-    // Clean up existing observer if any
-    if (this.modalThemeObserver) {
-      this.modalThemeObserver.disconnect();
+    // If global observer already exists, don't create another one
+    if (globalModalThemeObserver) {
+      logger.debug('Theme observer already exists, skipping setup');
+      // Still update instance reference for backwards compatibility
+      this.modalThemeObserver = globalModalThemeObserver;
+      return;
     }
 
-    // Create observer to watch for class changes on documentElement
-    this.modalThemeObserver = new MutationObserver((mutations) => {
+    // Create global observer to watch for class changes on documentElement
+    globalModalThemeObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
           const isDark = document.documentElement.classList.contains('dark');
           const newTheme = isDark ? 'dark' : 'light';
           
           try {
-            // Update modal theme
-            // Note: WalletConnectModal may need to be re-initialized or have a setTheme method
-            // For now, we'll log the change - the modal should pick up theme changes on next open
+            // Update modal theme using the global modal instance
             logger.debug('Theme changed, updating WalletConnect modal', { theme: newTheme });
             
             // If the modal has a method to update theme, use it
@@ -840,7 +844,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             interface ModalWithTheme {
               setTheme?: (theme: string) => void;
             }
-            const modalWithTheme = modal as ModalWithTheme;
+            const modalWithTheme = (globalWalletConnectModal || modal) as ModalWithTheme;
             if (modalWithTheme && typeof modalWithTheme.setTheme === 'function') {
               modalWithTheme.setTheme(newTheme);
             }
@@ -852,10 +856,13 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     });
 
     // Start observing the documentElement for class changes
-    this.modalThemeObserver.observe(document.documentElement, {
+    globalModalThemeObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class'],
     });
+
+    // Update instance reference for backwards compatibility
+    this.modalThemeObserver = globalModalThemeObserver;
 
     logger.debug('Theme observer set up for WalletConnect modal');
   }
@@ -1012,8 +1019,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
               logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
               
               // Set up theme observer to update modal when theme changes
-              // Only set up observer once for the global modal
-              if (!this.modalThemeObserver) {
+              // Only set up observer once globally for the global modal
+              if (!globalModalThemeObserver) {
                 this.setupThemeObserver();
               }
             } catch (modalError) {

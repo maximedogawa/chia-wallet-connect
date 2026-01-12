@@ -1,6 +1,6 @@
 {
   "name": "@chia/wallet-connect-demo",
-  "version": "0.0.3",
+  "version": "0.0.2",
   "private": true,
   "scripts": {
     "dev": "npm run build:package && next dev",
