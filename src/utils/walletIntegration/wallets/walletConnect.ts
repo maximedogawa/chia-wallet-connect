@@ -22,6 +22,9 @@ const logger = createLogger('WalletConnect');
 let globalSignClient: SignClient | null = null;
 let globalSignClientPromise: Promise<SignClient> | null = null;
 
+// Singleton WalletConnectModal instance to prevent duplicate custom element registrations
+let globalWalletConnectModal: WalletConnectModal | null = null;
+
 
 interface wallet {
   data: string
@@ -187,18 +190,26 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       const signClient = await this.signClient();
         if (signClient) {
           // Ensure modal is initialized before connecting (for desktop)
-          // Modal initialization happens in signClient(), but we need to ensure it's ready
-          if (!this.modal && !isIOS() && typeof window !== 'undefined') {
-            const modalConfig = getModalConfig();
-            if (modalConfig) {
-              try {
-                this.modal = new WalletConnectModal(modalConfig);
-                logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
-                this.setupThemeObserver();
-              } catch (modalError) {
-                logger.error('Failed to initialize WalletConnect modal:', modalError);
+          // Use global singleton modal to prevent duplicate custom element registrations
+          if (!isIOS() && typeof window !== 'undefined') {
+            if (!globalWalletConnectModal) {
+              const modalConfig = getModalConfig();
+              if (modalConfig) {
+                try {
+                  globalWalletConnectModal = new WalletConnectModal(modalConfig);
+                  logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
+                  // Set up theme observer on the global modal instance
+                  if (this.modalThemeObserver) {
+                    this.modalThemeObserver.disconnect();
+                  }
+                  this.setupThemeObserver();
+                } catch (modalError) {
+                  logger.error('Failed to initialize WalletConnect modal:', modalError);
+                }
               }
             }
+            // Always use the global modal instance (convert null to undefined for type compatibility)
+            this.modal = globalWalletConnectModal ?? undefined;
           }
           
           // Use REQUIRED_NAMESPACES from constants (includes all Sage methods)
@@ -800,7 +811,9 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
    * and update the WalletConnect modal theme accordingly
    */
   setupThemeObserver() {
-    if (typeof window === 'undefined' || !this.modal) {
+    // Use global modal if available, otherwise use instance modal
+    const modal = globalWalletConnectModal || this.modal;
+    if (typeof window === 'undefined' || !modal) {
       return;
     }
 
@@ -827,7 +840,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             interface ModalWithTheme {
               setTheme?: (theme: string) => void;
             }
-            const modalWithTheme = this.modal as ModalWithTheme;
+            const modalWithTheme = modal as ModalWithTheme;
             if (modalWithTheme && typeof modalWithTheme.setTheme === 'function') {
               modalWithTheme.setTheme(newTheme);
             }
@@ -989,23 +1002,30 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       
       // Initialize native WalletConnect modal for desktop (not iOS)
       // iOS uses custom modal with better clipboard support
-      // Only initialize modal once per instance
-      if (!this.modal && !isIOS() && typeof window !== 'undefined') {
-        const modalConfig = getModalConfig();
-        if (modalConfig) {
-          try {
-            this.modal = new WalletConnectModal(modalConfig);
-            logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
-            
-            // Set up theme observer to update modal when theme changes
-            this.setupThemeObserver();
-          } catch (modalError) {
-            logger.error('Failed to initialize WalletConnect modal:', modalError);
-            // Continue without modal - fallback to custom implementation
+      // Use global singleton modal to prevent duplicate custom element registrations
+      if (!isIOS() && typeof window !== 'undefined') {
+        if (!globalWalletConnectModal) {
+          const modalConfig = getModalConfig();
+          if (modalConfig) {
+            try {
+              globalWalletConnectModal = new WalletConnectModal(modalConfig);
+              logger.debug('Native WalletConnect modal initialized for desktop', { theme: modalConfig.themeMode });
+              
+              // Set up theme observer to update modal when theme changes
+              // Only set up observer once for the global modal
+              if (!this.modalThemeObserver) {
+                this.setupThemeObserver();
+              }
+            } catch (modalError) {
+              logger.error('Failed to initialize WalletConnect modal:', modalError);
+              // Continue without modal - fallback to custom implementation
+            }
+          } else {
+            logger.warn('WalletConnect modal not initialized: projectId is required');
           }
-        } else {
-          logger.warn('WalletConnect modal not initialized: projectId is required');
         }
+        // Always use the global modal instance (convert null to undefined for type compatibility)
+        this.modal = globalWalletConnectModal ?? undefined;
       }
       
       return signClient;
