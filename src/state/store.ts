@@ -15,6 +15,7 @@ import completeWithWalletReducer from './completeWithWalletSlice.js';
 import globalOnLoadDataReducer from './globalOnLoadDataSlice.js';
 import settingsModalReducer from './settingsModalSlice.js';
 import walletConnectReducer from './walletConnectSlice.js';
+import walletConnectNetworkReducer from './walletConnectNetworkSlice.js';
 import walletReducer from './walletSlice.js';
 
 // Use conditional storage for SSR compatibility
@@ -56,6 +57,7 @@ const rootReducer = combineReducers({
   completeWithWallet: completeWithWalletReducer,
   globalOnLoadData: globalOnLoadDataReducer,
   walletConnect: walletConnectReducer,
+  walletConnectNetwork: walletConnectNetworkReducer,
   settingsModal: settingsModalReducer,
   wallet: walletReducer,
 });
@@ -81,7 +83,7 @@ const store = configureStore({
 
 export const persistor = persistStore(store);
 
-export const useAppDispatch = () => useDispatch();
+export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 export type RootState = ReturnType<typeof store.getState>;

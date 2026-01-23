@@ -1,6 +1,6 @@
 {
   "name": "@maximedogawa/chia-wallet-connect-react",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "WalletConnect plugin for Chia blockchain",
   "main": "dist/index.js",
   "module": "dist/index.js",

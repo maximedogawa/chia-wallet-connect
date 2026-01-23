@@ -22,6 +22,7 @@ export { useAppDispatch, useAppSelector } from './hooks';
 // Connection state hooks
 export { useWalletConnectionState } from './hooks/useWalletConnectionState';
 export { useWalletConnectRestore, restoreConnectionStateImmediate } from './hooks/useWalletConnectRestore';
+export { useWalletConnectNetwork } from './hooks/useWalletConnectNetwork';
 
 // Connection state restoration utility
 export { restoreConnectionState } from './utils/walletIntegration/restoreConnectionState';
@@ -37,6 +38,8 @@ export {
   deleteTopicFromFingerprintMemory,
   setSelectedFingerprint
 } from './state/walletConnectSlice';
+export { setNetwork, selectNetwork } from './state/walletConnectNetworkSlice';
+export type { ChiaNetwork } from './state/walletConnectNetworkSlice';
 export {
   setUserMustAddTheseAssetsToWallet,
   setOfferRejected,
@@ -45,6 +48,17 @@ export {
 
 // Types
 export type { SessionTypes } from '@walletconnect/types';
+
+// Wallet Connect constants and utilities
+export { 
+  CHIA_MAINNET_CHAIN_ID, 
+  CHIA_TESTNET_CHAIN_ID, 
+  getChainId, 
+  getChainIdFromEnv,
+  getRequiredNamespaces,
+  getModalConfig
+} from './constants/wallet-connect';
+export type { WalletConnectMetadata } from './constants/wallet-connect';
 
 // Shared components (if needed)
 export { default as Modal } from './components/shared/Modal';
