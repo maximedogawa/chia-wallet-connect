@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -9,22 +9,17 @@ import {
   WalletManager, 
   restoreConnectionStateImmediate 
 } from '@maximedogawa/chia-wallet-connect-react';
-import Navbar from '../../dist/components/shared/navbar/Navbar';
+import DemoNavbar from '../components/DemoNavbar';
 
 export default function ClientApp({ Component, pageProps }: AppProps) {
-  const [theme, setTheme] = useState<"dark" | "light" | "auto">("auto");
-  
   useEffect(() => {
     const detectTheme = () => {
       if (localStorage.theme === 'dark') {
         document.documentElement.classList.add('dark');
-        setTheme('dark');
       } else if (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
-        setTheme('auto');
       } else {
         document.documentElement.classList.remove('dark');
-        setTheme(localStorage.theme === 'light' ? 'light' : 'auto');
       }
     };
     
@@ -51,9 +46,9 @@ export default function ClientApp({ Component, pageProps }: AppProps) {
         }}
       >
         <div className="min-h-screen relative">
-          <Navbar theme={theme} setTheme={setTheme} />
+          <DemoNavbar />
           <Toaster position="bottom-right" />
-          <div className="flex flex-col px-4 pt-12 pb-24">
+          <div className="flex flex-col px-4 py-6">
             <Component {...pageProps} />
           </div>
         </div>

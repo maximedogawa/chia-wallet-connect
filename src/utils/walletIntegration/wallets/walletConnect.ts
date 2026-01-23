@@ -11,7 +11,8 @@ import store from '@/state/store.js';
 import { setAddress, setConnectedWallet } from '@/state/walletSlice.js';
 import { connectSession, setPairingUri, selectSession, setSessions, deleteTopicFromFingerprintMemory, setSelectedFingerprint } from '@/state/walletConnectSlice.js';
 import { setUserMustAddTheseAssetsToWallet, setOfferRejected, setRequestStep } from '@/state/completeWithWalletSlice.js';
-import { CHIA_CHAIN_ID, REQUIRED_NAMESPACES, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata, getModalConfig } from '@/constants/wallet-connect.js';
+import { selectNetwork } from '@/state/walletConnectNetworkSlice.js';
+import { getChainId, getRequiredNamespaces, SIGN_CLIENT_CONFIG, DEFAULT_WALLET_IMAGE, type WalletConnectMetadata, getModalConfig } from '@/constants/wallet-connect.js';
 import { SageMethods } from '@/constants/sage-methods.js';
 import { createLogger } from '@/utils/logger.js';
 import { isIOS } from '@/utils/deviceDetection.js';
@@ -77,7 +78,6 @@ function isWalletConnectError(error: unknown): error is WalletConnectError {
 class WalletConnectIntegration implements WalletIntegrationInterface {
   name = "WalletConnect"
   image: string
-  chainId = CHIA_CHAIN_ID
   topic
   client: SignClient | undefined
   selectedFingerprint
@@ -100,6 +100,119 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       const fingerprint = state.walletConnect.selectedFingerprint[selectedSession.topic];
       this.selectedFingerprint = fingerprint;
     }
+  }
+
+  /**
+   * Validates if a chain ID is a valid Chia chain ID.
+   * 
+   * @param chainId - The chain ID to validate
+   * @returns True if the chain ID is valid, false otherwise
+   */
+  private isValidChainId(chainId: string | null | undefined): chainId is string {
+    return chainId === 'chia:mainnet' || chainId === 'chia:testnet';
+  }
+
+  /**
+   * Extracts chain ID from session's chains array.
+   * 
+   * @param session - The WalletConnect session
+   * @returns The chain ID if found and valid, null otherwise
+   */
+  private extractChainIdFromSessionChains(session: SessionTypes.Struct): string | null {
+    const chains = session.namespaces?.chia?.chains;
+    if (!chains || chains.length === 0) {
+      return null;
+    }
+
+    const sessionChainId = chains[0];
+    if (this.isValidChainId(sessionChainId)) {
+      logger.debug('Using chain ID from session chains:', sessionChainId);
+      return sessionChainId;
+    }
+
+    logger.warn(`Invalid chain ID in session chains: ${sessionChainId}. Trying accounts...`);
+    return null;
+  }
+
+  /**
+   * Extracts chain ID from session's account format.
+   * Account format: "chia:mainnet:123" or "chia:testnet:123"
+   * 
+   * @param session - The WalletConnect session
+   * @returns The chain ID if found and valid, null otherwise
+   */
+  private extractChainIdFromSessionAccounts(session: SessionTypes.Struct): string | null {
+    const accounts = session.namespaces?.chia?.accounts;
+    if (!accounts || accounts.length === 0) {
+      return null;
+    }
+
+    const firstAccount = accounts[0];
+    const accountParts = firstAccount.split(':');
+    
+    if (accountParts.length < 2) {
+      return null;
+    }
+
+    const potentialChainId = `${accountParts[0]}:${accountParts[1]}`;
+    if (this.isValidChainId(potentialChainId)) {
+      logger.debug('Using chain ID extracted from session account:', potentialChainId);
+      return potentialChainId;
+    }
+
+    return null;
+  }
+
+  /**
+   * Gets the chain ID from the current network setting in Redux.
+   * 
+   * @returns A valid chain ID (defaults to mainnet if invalid)
+   */
+  private getChainIdFromNetworkSetting(): string {
+    const state = store.getState();
+    const network = selectNetwork(state);
+    const chainId = getChainId(network);
+    
+    logger.debug('Using chain ID from network setting:', chainId, 'for network:', network);
+    
+    if (!this.isValidChainId(chainId)) {
+      logger.error(`Invalid chain ID: ${chainId}. Defaulting to mainnet.`);
+      return getChainId('mainnet');
+    }
+    
+    return chainId;
+  }
+
+  /**
+   * Get the chain ID from the active session, or fall back to the current network setting.
+   * Sessions are established with a specific chain ID, so we should use the session's chain ID
+   * for requests to avoid "Missing or invalid chainId" errors.
+   * 
+   * @returns The chain ID from the session, or the current network setting if no session
+   */
+  getChainId(): string {
+    const state = store.getState();
+    const selectedSession = state.walletConnect.selectedSession;
+    
+    // If we have an active session, try to extract chain ID from it
+    if (selectedSession?.namespaces?.chia) {
+      // Try to get chain ID from session chains first
+      const chainIdFromChains = this.extractChainIdFromSessionChains(selectedSession);
+      if (chainIdFromChains) {
+        return chainIdFromChains;
+      }
+
+      // Fallback: Extract chain ID from accounts
+      const chainIdFromAccounts = this.extractChainIdFromSessionAccounts(selectedSession);
+      if (chainIdFromAccounts) {
+        return chainIdFromAccounts;
+      }
+
+      logger.warn('Could not extract chain ID from session, falling back to network setting');
+    }
+    
+    // Fall back to current network setting if no session or couldn't extract chain ID
+    return this.getChainIdFromNetworkSetting();
   }
 
   async updateSessions() {
@@ -196,7 +309,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           // Use global singleton modal to prevent duplicate custom element registrations
           if (!isIOS() && typeof window !== 'undefined') {
             if (!globalWalletConnectModal) {
-              const modalConfig = getModalConfig();
+              const currentChainId = this.getChainId();
+              const modalConfig = getModalConfig(currentChainId);
               if (modalConfig) {
                 try {
                   globalWalletConnectModal = new WalletConnectModal(modalConfig);
@@ -214,11 +328,26 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             this.modal = globalWalletConnectModal ?? undefined;
           }
           
-          // Use REQUIRED_NAMESPACES from constants (includes all Sage methods)
+          // Use REQUIRED_NAMESPACES with current network setting (for NEW connections)
           // Note: requiredNamespaces is deprecated, using optionalNamespaces instead
           // Fetch uri to display QR code to establish new wallet connection
+          // For new connections, we use the current network setting, not an existing session's chain ID
+          let currentChainId: string;
+          let requiredNamespaces;
+          try {
+            // Get chain ID from current network setting (not from existing session)
+            const state = store.getState();
+            const network = selectNetwork(state);
+            currentChainId = getChainId(network);
+            requiredNamespaces = getRequiredNamespaces(currentChainId);
+            logger.debug('Connecting new session with chain ID:', currentChainId);
+          } catch (error) {
+            logger.error('Error getting chain ID or required namespaces:', error);
+            throw new Error(`Failed to initialize WalletConnect connection: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          
           const { uri, approval } = await signClient.connect({
-            optionalNamespaces: REQUIRED_NAMESPACES,
+            optionalNamespaces: requiredNamespaces,
           });
 
           // Use native WalletConnect modal on desktop, custom modal on iOS
@@ -476,9 +605,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         if(walletsResponse?.isSage) {
           logger.info("Sage offer request");
          
+          const currentChainId = this.getChainId();
           const resultOffer: {offer: string | undefined, error: string | undefined} = await signClient.request({
             topic: this.topic,
-            chainId: this.chainId,
+            chainId: currentChainId,
             request: {
               method: "chia_createOffer",
               params: {
@@ -518,9 +648,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }
 
         // Send request to generate offer via WalletConnect
+        const currentChainId = this.getChainId();
         const resultOffer: resultOffer = await signClient.request({
           topic: this.topic,
-          chainId: this.chainId,
+          chainId: currentChainId,
           request: {
             method: "chia_createOfferForIds",
             params: {
@@ -565,9 +696,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         
         try {
           // Send request to get Wallets via WalletConnect
+          const currentChainId = this.getChainId();
           const request: Promise<wallets> = signClient.request({
             topic: this.topic,
-            chainId: this.chainId,
+            chainId: currentChainId,
             request: {
               method: "chia_getWallets",
               params: {
@@ -618,9 +750,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         }
 
         // Send request to get Wallets via WalletConnect
+        const currentChainId = this.getChainId();
         const request = signClient.request({
           topic: this.topic,
-          chainId: this.chainId,
+          chainId: currentChainId,
           request: {
             method: "chia_addCATToken",
             params: {
@@ -665,11 +798,12 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       
       logger.debug('verifyConnectionWithSageMethod: Using method:', SageMethods.CHIA_GET_ADDRESS);
       logger.debug('verifyConnectionWithSageMethod: Topic:', topic);
-      logger.debug('verifyConnectionWithSageMethod: ChainId:', this.chainId);
+      const currentChainId = this.getChainId();
+      logger.debug('verifyConnectionWithSageMethod: ChainId:', currentChainId);
       
       const request = signClient.request<{address: string}>({
         topic: topic as string,
-        chainId: this.chainId,
+        chainId: currentChainId,
         request: {
           method: SageMethods.CHIA_GET_ADDRESS,
           params: {},
@@ -702,36 +836,60 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
   async getAddress(): Promise<string | null> {
     logger.debug('getAddress: Starting address fetch...');
 
-    let signClient;
-    let topic;
+    let signClient: SignClient | undefined;
+    let topic: string | undefined;
+    let selectedSession: SessionTypes.Struct | null | undefined;
+    let fingerprint: number | undefined;
+    let wallet_id: number | undefined;
     try {
-      signClient = await this.signClient();
-      const state = store.getState();
-      topic = state.walletConnect.selectedSession?.topic;
-      if (!topic || !signClient) {
-        logger.debug('getAddress: No topic or signClient available');
+      const clientResult = await this.signClient();
+      if (!clientResult) {
+        logger.debug('getAddress: SignClient not available');
         toast.error('Not connected via WalletConnect or could not sign client', { id: 'failed-to-sign-client' });
         throw Error('Not connected via WalletConnect or could not sign client');
       }
-      const selectedSession = state?.walletConnect?.selectedSession;
-      if (!selectedSession) {
+      signClient = clientResult;
+      
+      const state = store.getState();
+      topic = state.walletConnect.selectedSession?.topic;
+      if (!topic) {
+        logger.debug('getAddress: No topic available');
+        toast.error('Not connected via WalletConnect', { id: 'failed-to-sign-client' });
+        throw Error('Not connected via WalletConnect');
+      }
+      
+      const session = state?.walletConnect?.selectedSession;
+      if (!session || session === null) {
         logger.debug('getAddress: No selected session');
         return null;
       }
-      const fingerprint = state.walletConnect.selectedFingerprint[selectedSession.topic];
-      if (!fingerprint) {
+      selectedSession = session as SessionTypes.Struct;
+      fingerprint = state.walletConnect.selectedFingerprint[selectedSession.topic];
+      if (fingerprint === undefined || fingerprint === null) {
         logger.debug('getAddress: No fingerprint selected');
         return null;
       }
-      const wallet_id = selectedSession?.namespaces?.chia?.accounts.findIndex(account => account.includes(fingerprint.toString()));
+      const fingerprintValue = fingerprint; // Type guard
+      wallet_id = selectedSession?.namespaces?.chia?.accounts.findIndex(account => account.includes(fingerprintValue.toString()));
       logger.debug('getAddress: Wallet ID:', wallet_id);
-      if (wallet_id === undefined) {
-        logger.debug('getAddress: Wallet ID is undefined');
-        return '';
+      if (wallet_id === undefined || wallet_id === -1) {
+        logger.debug('getAddress: Wallet ID is undefined or not found');
+        return null;
       }
+      // Get chain ID - prefer session's chain ID to avoid mismatches
+      const currentChainId = this.getChainId();
+      
+      // Log session info for debugging
+      logger.debug('getAddress: Session info', {
+        topic,
+        sessionChains: selectedSession?.namespaces?.chia?.chains,
+        sessionAccounts: selectedSession?.namespaces?.chia?.accounts?.slice(0, 1), // Log first account only
+        usingChainId: currentChainId,
+      });
+      
       logger.debug('getAddress: Requesting address with method chia_getCurrentAddress', {
         topic,
-        chainId: this.chainId,
+        chainId: currentChainId,
         method: "chia_getCurrentAddress",
         params: {
           fingerprint: fingerprint,
@@ -742,7 +900,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
 
       const request = signClient.request<{data: string}>({
         topic,
-        chainId: this.chainId,
+        chainId: currentChainId,
         request: {
           method: "chia_getCurrentAddress",
           params: {
@@ -764,6 +922,47 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       }
       return address;
     } catch (error: unknown) {
+      // Check if error is about invalid chain ID
+      const isInvalidChainId = isWalletConnectError(error) && 
+        (error.message?.includes("Missing or invalid") && error.message?.includes("chainId") ||
+         error.message?.includes("Invalid chainId"));
+      
+      // If chain ID mismatch, try the alternative chain ID
+      if (isInvalidChainId && selectedSession && signClient && fingerprint !== undefined && wallet_id !== undefined) {
+        logger.warn('Chain ID mismatch detected, trying alternative chain ID');
+        const state = store.getState();
+        const network = selectNetwork(state);
+        const alternativeChainId = network === 'mainnet' ? 'chia:testnet' : 'chia:mainnet';
+        
+        try {
+          logger.debug('Retrying with alternative chain ID:', alternativeChainId);
+          if (!signClient || !topic) {
+            throw new Error('SignClient or topic not available for retry');
+          }
+          const retryRequest = signClient.request<{data: string}>({
+            topic,
+            chainId: alternativeChainId,
+            request: {
+              method: "chia_getCurrentAddress",
+              params: {
+                fingerprint: fingerprint,
+                wallet_id,
+                new_address: false
+              },
+            },
+          });
+          const retryResponse = await retryRequest;
+          const address = retryResponse?.data || null;
+          if (address) {
+            logger.info('Successfully retrieved address with alternative chain ID');
+            store.dispatch(setAddress(address));
+            return address;
+          }
+        } catch (retryError) {
+          logger.error('Retry with alternative chain ID also failed:', retryError);
+        }
+      }
+      
       // Check for various error formats that indicate the method is not supported
       const isUnsupportedMethod = isWalletConnectError(error) && 
         error.code === 4001 && 
@@ -776,9 +975,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
         logger.info("Sage wallet detected, using chia_getAddress method");
 
         try {
+          const currentChainId = this.getChainId();
           const request = (signClient as SignClient).request<{address: string}>({
             topic: topic as string,
-            chainId: this.chainId,
+            chainId: currentChainId,
             request: {
               method: "chia_getAddress",
               params: {},
@@ -1012,7 +1212,8 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
       // Use global singleton modal to prevent duplicate custom element registrations
       if (!isIOS() && typeof window !== 'undefined') {
         if (!globalWalletConnectModal) {
-          const modalConfig = getModalConfig();
+          const currentChainId = this.getChainId();
+          const modalConfig = getModalConfig(currentChainId);
           if (modalConfig) {
             try {
               globalWalletConnectModal = new WalletConnectModal(modalConfig);
