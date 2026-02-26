@@ -16,6 +16,10 @@ export {
   resetWalletConnectClient,
 } from "./utils/walletIntegration/wallets/walletConnect";
 export type {
+  WalletBalanceResult,
+  WalletBalanceResponse,
+} from "./utils/walletIntegration/wallets/walletConnect";
+export type {
   default as WalletIntegrationInterface,
   walletNamesType,
   generateOffer,
@@ -54,6 +58,7 @@ export {
 } from "./state/walletConnectSlice";
 export { setNetwork, selectNetwork } from "./state/walletConnectNetworkSlice";
 export type { ChiaNetwork } from "./state/walletConnectNetworkSlice";
+export { selectVisibilityTick } from "./state/appSlice";
 export {
   setUserMustAddTheseAssetsToWallet,
   setOfferRejected,

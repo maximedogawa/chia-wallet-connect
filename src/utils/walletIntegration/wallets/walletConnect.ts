@@ -1,6 +1,5 @@
 import type { SessionTypes } from "@walletconnect/types";
 import SignClient from "@walletconnect/sign-client";
-import Client from "@walletconnect/sign-client";
 import { WalletConnectModal } from "@walletconnect/modal";
 import { toast } from "react-hot-toast";
 import pino from "pino";
@@ -1433,7 +1432,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
     logger.debug("Theme observer set up for WalletConnect modal");
   }
 
-  async signClient(): Promise<void | Client> {
+  async signClient(): Promise<void | SignClient> {
     // If client has been saved to object, return that instead of completing a new sign
     if (this.client) return this.client;
 

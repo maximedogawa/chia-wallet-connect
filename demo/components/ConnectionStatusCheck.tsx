@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   useWalletConnectionState,
   WalletConnect,
+  selectVisibilityTick,
 } from '@maximedogawa/chia-wallet-connect-react';
-import type { RootState } from '@maximedogawa/chia-wallet-connect-react';
+import type {
+  RootState,
+  WalletBalanceResult,
+} from '@maximedogawa/chia-wallet-connect-react';
 
 /**
  * Demo component: shows WalletConnect session status, wallet address from
@@ -26,23 +30,12 @@ export default function ConnectionStatusCheck() {
 
   const [balanceCheck, setBalanceCheck] = useState<{
     status: 'idle' | 'loading' | 'ok' | 'error';
-    data?: {
-      confirmedWalletBalance: number;
-      spendableBalance: number;
-      unconfirmedWalletBalance: number;
-      walletId: number;
-    };
+    data?: WalletBalanceResult;
     error?: string;
   }>({ status: 'idle' });
 
-  // When tab becomes visible, force re-render so state set while tab was
-  // backgrounded gets painted
-  const [, setVisibilityTick] = useState(0);
-  useEffect(() => {
-    const onVisible = () => setVisibilityTick((t) => t + 1);
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  // Re-render when tab becomes visible so connection state updates after app switch
+  useSelector(selectVisibilityTick);
 
   const runRelayCheck = async () => {
     setRelayCheck({ status: 'checking' });
@@ -151,7 +144,7 @@ export default function ConnectionStatusCheck() {
       {isWalletConnect && walletConnectSession && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            Request wallet balance (chia_getWalletBalance) to verify requests work:
+            Request wallet balance to verify requests work (chip0002_getAssetBalance or chia_getWalletBalance):
           </p>
           <button
             type="button"
