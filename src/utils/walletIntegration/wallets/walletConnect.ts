@@ -24,6 +24,7 @@ import {
   setOfferRejected,
   setRequestStep,
 } from "@/state/completeWithWalletSlice.js";
+import { incrementVisibilityTick } from "@/state/appSlice.js";
 import { selectNetwork } from "@/state/walletConnectNetworkSlice.js";
 import {
   getChainId,
@@ -38,6 +39,17 @@ import { createLogger } from "@/utils/logger.js";
 import { isIOS, isMobile } from "@/utils/deviceDetection.js";
 
 const logger = createLogger("WalletConnect");
+
+export interface WalletBalanceResult {
+  confirmedWalletBalance: number;
+  spendableBalance: number;
+  unconfirmedWalletBalance: number;
+  walletId: number;
+}
+
+export type WalletBalanceResponse =
+  | { ok: true; data: WalletBalanceResult }
+  | { ok: false; error: string };
 
 // Singleton SignClient instance to prevent multiple initializations
 let globalSignClient: SignClient | null = null;
@@ -68,12 +80,55 @@ function attachMobileVisibilityReset(): void {
     return;
   mobileVisibilityListenerAttached = true;
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      resetWalletConnectClient();
+    if (document.visibilityState !== "visible") return;
+    const state = store.getState();
+    // Force connection UI to re-render (approval may have completed while tab was backgrounded)
+    store.dispatch(incrementVisibilityTick());
+    // Do not reset while user is in pairing flow (they may be returning from
+    // the wallet after approving). Resetting would destroy the client before it receives the approval.
+    if (state.walletConnect.pairingUri) {
       logger.debug(
-        "Mobile app/tab visible: WalletConnect client reset for next connection",
+        "Mobile visible during pairing: keeping client so approval can be received",
       );
+      return;
     }
+    // Do not reset when we have an active WalletConnect session – we're really connected.
+    // Resetting here would clear the client that holds the session and could show stale/wrong state.
+    if (
+      state.wallet.connectedWallet === "WalletConnect" &&
+      state.walletConnect.selectedSession
+    ) {
+      logger.debug("Mobile visible with active session: keeping client");
+      // If we have a session but no address (e.g. getAddress failed in background), try to fetch it now
+      if (!state.wallet.address) {
+        const wc = new WalletConnectIntegration();
+        wc.getAddress()
+          .then((address: string | null) => {
+            if (address) {
+              store.dispatch(setAddress(address));
+              store.dispatch(
+                setConnectedWallet({
+                  wallet: "WalletConnect",
+                  address,
+                  image: wc.image,
+                  name: "WalletConnect",
+                }),
+              );
+              logger.info("Fetched wallet address after tab visible", {
+                address: `${address.slice(0, 7)}...${address.slice(-4)}`,
+              });
+            }
+          })
+          .catch((err: unknown) => {
+            logger.debug("Could not fetch address on visible:", err);
+          });
+      }
+      return;
+    }
+    resetWalletConnectClient();
+    logger.debug(
+      "Mobile app/tab visible: WalletConnect client reset for next connection",
+    );
   });
 }
 
@@ -513,7 +568,7 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
           address = await this.getAddress();
           if (address) {
             logger.debug("Connection verified successfully!", {
-              address: `${address.slice(0, 7)  }...${  address.slice(-4)}`,
+              address: `${address.slice(0, 7)}...${address.slice(-4)}`,
             });
           }
         } catch (addressError) {
@@ -855,7 +910,91 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
   }
 
   getBalance(): void {
-    // WalletConnect balance retrieval logic
+    // WalletConnect balance retrieval logic (use getWalletBalance for actual request)
+  }
+
+  /**
+   * Request wallet balance. Uses the same approach as pengui: try chip0002_getAssetBalance
+   * first (Sage/CHIP-0002) with fingerprint + type/assetId; fall back to chia_getWalletBalance
+   * (reference Chia wallet) if the wallet does not support CHIP-0002.
+   * @param walletId - Wallet id for chia_getWalletBalance fallback (default 1 for standard XCH)
+   * @returns Result with data or error message so UI can show the actual failure reason
+   */
+  async getWalletBalance(walletId: number = 1): Promise<WalletBalanceResponse> {
+    const signClient = await this.signClient();
+    if (!signClient || !this.topic) {
+      return { ok: false, error: "Not connected (no session or sign client)" };
+    }
+    const chainId = this.getChainId();
+
+    // 1) Try chip0002_getAssetBalance first (same as pengui: Sage/CHIP-0002)
+    //    Params: fingerprint, type, assetId (null = default XCH). Response: { confirmed, spendable, spendableCoinCount? }
+    try {
+      const sageResult = await signClient.request({
+        topic: this.topic,
+        chainId,
+        request: {
+          method: SageMethods.CHIP0002_GET_ASSET_BALANCE,
+          params: {
+            fingerprint: this.selectedFingerprint,
+            type: null,
+            assetId: null,
+          },
+        },
+      });
+      const sage = sageResult as {
+        confirmed?: string | number;
+        spendable?: string | number;
+        spendableCoinCount?: number;
+      };
+      if (
+        sage &&
+        (sage.confirmed !== undefined || sage.spendable !== undefined)
+      ) {
+        const toMojos = (v: string | number | undefined): number =>
+          v === undefined ? 0 : typeof v === "string" ? Number(v) : v;
+        const confirmed = toMojos(sage.confirmed);
+        const spendable = toMojos(sage.spendable);
+        return {
+          ok: true,
+          data: {
+            confirmedWalletBalance: confirmed,
+            spendableBalance: spendable,
+            unconfirmedWalletBalance: 0,
+            walletId: 0,
+          },
+        };
+      }
+    } catch (err: unknown) {
+      const errMessage = isWalletConnectError(err) ? err.message : String(err);
+      const isUnsupported =
+        isWalletConnectError(err) &&
+        err.code === 4001 &&
+        /Unsupported method: chip0002_getAssetBalance/i.test(errMessage);
+      if (!isUnsupported) {
+        return { ok: false, error: errMessage };
+      }
+    }
+
+    // 2) Fall back to chia_getWalletBalance (reference Chia wallet)
+    try {
+      const result = await signClient.request({
+        topic: this.topic,
+        chainId,
+        request: {
+          method: "chia_getWalletBalance",
+          params: { walletId },
+        },
+      });
+      const r = result as { confirmedWalletBalance?: number };
+      if (r && typeof r.confirmedWalletBalance === "number") {
+        return { ok: true, data: result as WalletBalanceResult };
+      }
+      return { ok: false, error: "Wallet returned unexpected balance format" };
+    } catch (err: unknown) {
+      const msg = isWalletConnectError(err) ? err.message : String(err);
+      return { ok: false, error: msg };
+    }
   }
 
   async getWallets(): Promise<WalletsResponse | undefined> {
@@ -1209,7 +1348,10 @@ class WalletConnectIntegration implements WalletIntegrationInterface {
             return address;
           }
         } catch (sageError) {
-          logger.debug("getAddress: Sage chia_getAddress also failed:", sageError);
+          logger.debug(
+            "getAddress: Sage chia_getAddress also failed:",
+            sageError,
+          );
         }
       }
 

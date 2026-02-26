@@ -24,6 +24,17 @@ export default function ConnectionStatusCheck() {
     error?: string;
   }>({ status: 'idle' });
 
+  const [balanceCheck, setBalanceCheck] = useState<{
+    status: 'idle' | 'loading' | 'ok' | 'error';
+    data?: {
+      confirmedWalletBalance: number;
+      spendableBalance: number;
+      unconfirmedWalletBalance: number;
+      walletId: number;
+    };
+    error?: string;
+  }>({ status: 'idle' });
+
   // When tab becomes visible, force re-render so state set while tab was
   // backgrounded gets painted
   const [, setVisibilityTick] = useState(0);
@@ -42,6 +53,22 @@ export default function ConnectionStatusCheck() {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setRelayCheck({ status: 'error', error: message });
+    }
+  };
+
+  const runBalanceRequest = async () => {
+    setBalanceCheck({ status: 'loading' });
+    try {
+      const wc = new WalletConnect();
+      const result = await wc.getWalletBalance(1);
+      if (result.ok) {
+        setBalanceCheck({ status: 'ok', data: result.data });
+      } else {
+        setBalanceCheck({ status: 'error', error: result.error });
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setBalanceCheck({ status: 'error', error: message });
     }
   };
 
@@ -120,6 +147,38 @@ export default function ConnectionStatusCheck() {
           </p>
         )}
       </div>
+
+      {isWalletConnect && walletConnectSession && (
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            Request wallet balance (chia_getWalletBalance) to verify requests work:
+          </p>
+          <button
+            type="button"
+            onClick={runBalanceRequest}
+            disabled={balanceCheck.status === 'loading'}
+            className="px-3 py-2 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {balanceCheck.status === 'loading' ? 'Requesting…' : 'Get wallet balance'}
+          </button>
+          {balanceCheck.status === 'ok' && balanceCheck.data && (
+            <div className="mt-2 p-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-sm text-green-800 dark:text-green-200 font-mono">
+              <p>Wallet id: {balanceCheck.data.walletId}</p>
+              <p>Confirmed: {balanceCheck.data.confirmedWalletBalance} mojos</p>
+              <p>Spendable: {balanceCheck.data.spendableBalance} mojos</p>
+              <p>Unconfirmed: {balanceCheck.data.unconfirmedWalletBalance} mojos</p>
+              <p className="mt-1 text-xs">
+                (1 XCH = 1e12 mojos → {(balanceCheck.data.spendableBalance / 1e12).toFixed(6)} XCH)
+              </p>
+            </div>
+          )}
+          {balanceCheck.status === 'error' && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+              {balanceCheck.error}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

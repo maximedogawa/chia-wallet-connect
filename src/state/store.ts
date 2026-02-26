@@ -11,6 +11,7 @@ import {
   persistStore,
 } from "redux-persist";
 
+import appReducer from './appSlice.js';
 import completeWithWalletReducer from './completeWithWalletSlice.js';
 import globalOnLoadDataReducer from './globalOnLoadDataSlice.js';
 import settingsModalReducer from './settingsModalSlice.js';
@@ -59,6 +60,7 @@ if (typeof window !== 'undefined') {
 }
 
 const rootReducer = combineReducers({
+  app: appReducer,
   completeWithWallet: completeWithWalletReducer,
   globalOnLoadData: globalOnLoadDataReducer,
   walletConnect: walletConnectReducer,
@@ -71,7 +73,7 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  blacklist: ['completeWithWallet', 'settingsModal', 'globalOnLoadData'],
+  blacklist: ['app', 'completeWithWallet', 'settingsModal', 'globalOnLoadData'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
