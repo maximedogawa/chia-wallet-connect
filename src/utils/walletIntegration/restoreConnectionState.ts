@@ -45,7 +45,7 @@ export async function restoreConnectionState(
     
     const state = store.getState();
     const connectedWallet = state.wallet.connectedWallet;
-    const persistedSessions = state.walletConnect.sessions;
+    const _persistedSessions = state.walletConnect.sessions;
     const persistedSelectedSession = state.walletConnect.selectedSession;
     
     // Create WalletConnect instance to sync sessions
@@ -111,17 +111,11 @@ export async function restoreConnectionState(
     
     // If connectedWallet is not set, restore it from the session
     if (connectedWallet !== "WalletConnect") {
-      // Fetch address and set connectedWallet
-      // Try Sage method first (chia_getAddress), then fallback to regular getAddress
+      // Validate connection with CHIP0002_CHAIN_ID then fetch address (getAddress uses chia_getCurrentAddress with chia_getAddress fallback)
       let address: string | null = null;
       try {
-        // Try Sage method first (works for Sage wallets)
-        try {
-          address = await walletConnect.verifyConnectionWithSageMethod();
-        } catch (sageError) {
-          // Fallback to regular getAddress
-          address = await walletConnect.getAddress();
-        }
+        await walletConnect.verifyConnectionWithChip0002ChainId();
+        address = await walletConnect.getAddress();
       } catch (error) {
         logger.debug('Address fetch failed during restoration, connection will still be restored', error);
       }

@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { REHYDRATE } from 'redux-persist';
-
 import store from '@/state/store.js';
 import { restoreConnectionState, type RestoreConnectionStateOptions } from '@/utils/walletIntegration/restoreConnectionState.js';
 import { createLogger } from '@/utils/logger.js';
@@ -39,8 +37,8 @@ export function useWalletConnectRestore(
     const checkRehydration = () => {
       // Check if redux-persist has already rehydrated
       // The persistor state is stored in the store itself
-      const state = store.getState();
-      
+      const _state = store.getState();
+
       // If we have persisted state (not initial state), we're likely rehydrated
       // However, we need to wait for the actual rehydration to complete
       // We'll use a small delay to ensure PersistGate has completed
@@ -108,8 +106,7 @@ export function useWalletConnectRestore(
       }
       clearTimeout(initTimeout);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.walletConnectIcon, options.walletConnectMetadata]); // Re-run if options change
+  }, [options.walletConnectIcon, options.walletConnectMetadata]);
   
   return { isRestoring, isRestored, error };
 }

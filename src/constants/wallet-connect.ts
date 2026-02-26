@@ -143,7 +143,6 @@ export function getModalConfig(chainId?: string) {
 
   // Validate chain ID
   if (finalChainId !== CHIA_MAINNET_CHAIN_ID && finalChainId !== CHIA_TESTNET_CHAIN_ID) {
-    console.error(`Invalid chain ID for modal config: ${finalChainId}. Using default.`);
     // Fall back to mainnet if invalid
     const fallbackChainId = CHIA_MAINNET_CHAIN_ID;
     return {

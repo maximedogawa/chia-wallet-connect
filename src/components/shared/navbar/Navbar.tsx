@@ -17,4 +17,4 @@ export default function Navbar({ theme, setTheme }: NavbarProps) {
       </header>
     </>
   );
-};
+}

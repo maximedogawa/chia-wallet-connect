@@ -35,7 +35,7 @@ export function useWalletConnectionState(): {
   const walletName = useSelector((state: RootState) => state.wallet.name);
   const cnsName = useSelector((state: RootState) => state.wallet.CNSName);
   const walletConnectSelectedSession = useSelector((state: RootState) => state.walletConnect.selectedSession);
-  const walletConnectSessions = useSelector((state: RootState) => state.walletConnect.sessions);
+  const _walletConnectSessions = useSelector((state: RootState) => state.walletConnect.sessions);
   
   // Compute derived state
   const isWalletConnect = connectedWallet === "WalletConnect";

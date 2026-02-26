@@ -20,7 +20,12 @@ import walletReducer from './walletSlice.js';
 
 // Use conditional storage for SSR compatibility
 // For ESM, we use a synchronous import pattern that works in both browser and SSR
-let storage: any;
+interface PersistStorageLike {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+  removeItem(key: string): Promise<void>;
+}
+let storage: PersistStorageLike;
 if (typeof window !== 'undefined') {
   // In browser, use dynamic import (will be handled at runtime)
   import('redux-persist/lib/storage').then((module) => {
@@ -31,8 +36,8 @@ if (typeof window !== 'undefined') {
     getItem(_key: string) {
       return Promise.resolve(null);
     },
-    setItem(_key: string, value: any) {
-      return Promise.resolve(value);
+    setItem(_key: string, value: string) {
+      return Promise.resolve(undefined);
     },
     removeItem(_key: string) {
       return Promise.resolve();
@@ -44,8 +49,8 @@ if (typeof window !== 'undefined') {
     getItem(_key: string) {
       return Promise.resolve(null);
     },
-    setItem(_key: string, value: any) {
-      return Promise.resolve(value);
+    setItem(_key: string, _value: string) {
+      return Promise.resolve(undefined);
     },
     removeItem(_key: string) {
       return Promise.resolve();
