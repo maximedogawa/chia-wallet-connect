@@ -13,7 +13,6 @@ import CustomWalletConnectModal from './CustomWalletConnectModal';
 
 import { type RootState } from '@/state/store';
 import store from '@/state/store';
-import { selectVisibilityTick } from '@/state/appSlice';
 import WalletManager from "@/utils/walletIntegration/walletManager";
 import WalletConnect from "@/utils/walletIntegration/wallets/walletConnect";
 import { createLogger } from '@/utils/logger';
@@ -40,9 +39,8 @@ function ConnectWalletModal({ isOpen, setIsOpen, walletConnectIcon, walletConnec
     const walletConnectSessions = useSelector((state: RootState) => state.walletConnect.sessions);
     const walletConnectSelectedSession = useSelector((state: RootState) => state.walletConnect.selectedSession);
     const pairingUri = useSelector((state: RootState) => state.walletConnect.pairingUri);
-    useSelector(selectVisibilityTick); // Re-render when tab becomes visible so connection state updates after app switch
     const [isPairingQRModalOpen, setIsPairingQRModalOpen] = useState(false);
-
+    
     const walletManager = new WalletManager(walletConnectIcon, walletConnectMetadata);
     // Compute walletConnectActive reactively using useMemo
     const walletConnectActive = useMemo(() => {

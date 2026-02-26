@@ -8,7 +8,6 @@ import ConnectWalletModal from './ConnectWalletModal.js';
 
 
 import { getCNSNameApiCall } from '@/api.js';
-import { selectVisibilityTick } from '@/state/appSlice.js';
 import { selectSession } from '@/state/walletConnectSlice.js';
 import { setCNSName } from '@/state/walletSlice.js';
 import { RootState } from '@/state/store.js';
@@ -54,7 +53,7 @@ function ConnectButton({ connectText = "Manage Wallet", className = "", walletCo
     const CNSName = useSelector((state: RootState) => state.wallet.CNSName);
     const walletConnectSelectedSession = useSelector((state: RootState) => state.walletConnect.selectedSession);
     const walletConnectSessions = useSelector((state: RootState) => state.walletConnect.sessions);
-    useSelector(selectVisibilityTick); // Re-render when tab becomes visible so connection state updates after app switch
+    
     // Ensure selectedSession is set if we have sessions but no selected session
     useEffect(() => {
       if (connectedWallet === "WalletConnect" && !walletConnectSelectedSession && walletConnectSessions.length > 0) {

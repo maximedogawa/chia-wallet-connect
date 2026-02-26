@@ -86,23 +86,3 @@ export const isSafari = (): boolean => {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 };
 
-/**
- * Detect if the app is running as a PWA installed on the home screen (standalone).
- * Used to apply workarounds for iOS PWA WebSocket/network limitations.
- */
-export const isStandalonePWA = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  // iOS Safari: standalone when added to home screen
-  if ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone) {
-    return true;
-  }
-  // display-mode: standalone (e.g. Android, or standard PWA)
-  if (typeof window.matchMedia === 'function') {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches;
-    if (standalone) return true;
-    // Some browsers use window.standalone
-    if ((window as unknown as { standalone?: boolean }).standalone === true) return true;
-  }
-  return false;
-};
-

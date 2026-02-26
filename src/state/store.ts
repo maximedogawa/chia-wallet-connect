@@ -11,7 +11,6 @@ import {
   persistStore,
 } from "redux-persist";
 
-import appReducer from './appSlice.js';
 import completeWithWalletReducer from './completeWithWalletSlice.js';
 import globalOnLoadDataReducer from './globalOnLoadDataSlice.js';
 import settingsModalReducer from './settingsModalSlice.js';
@@ -21,12 +20,7 @@ import walletReducer from './walletSlice.js';
 
 // Use conditional storage for SSR compatibility
 // For ESM, we use a synchronous import pattern that works in both browser and SSR
-interface PersistStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
-}
-let storage: PersistStorageLike;
+let storage: any;
 if (typeof window !== 'undefined') {
   // In browser, use dynamic import (will be handled at runtime)
   import('redux-persist/lib/storage').then((module) => {
@@ -37,8 +31,8 @@ if (typeof window !== 'undefined') {
     getItem(_key: string) {
       return Promise.resolve(null);
     },
-    setItem(_key: string, value: string) {
-      return Promise.resolve(undefined);
+    setItem(_key: string, value: any) {
+      return Promise.resolve(value);
     },
     removeItem(_key: string) {
       return Promise.resolve();
@@ -50,8 +44,8 @@ if (typeof window !== 'undefined') {
     getItem(_key: string) {
       return Promise.resolve(null);
     },
-    setItem(_key: string, _value: string) {
-      return Promise.resolve(undefined);
+    setItem(_key: string, value: any) {
+      return Promise.resolve(value);
     },
     removeItem(_key: string) {
       return Promise.resolve();
@@ -60,7 +54,6 @@ if (typeof window !== 'undefined') {
 }
 
 const rootReducer = combineReducers({
-  app: appReducer,
   completeWithWallet: completeWithWalletReducer,
   globalOnLoadData: globalOnLoadDataReducer,
   walletConnect: walletConnectReducer,
@@ -73,7 +66,7 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  blacklist: ['app', 'completeWithWallet', 'settingsModal', 'globalOnLoadData'],
+  blacklist: ['completeWithWallet', 'settingsModal', 'globalOnLoadData'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

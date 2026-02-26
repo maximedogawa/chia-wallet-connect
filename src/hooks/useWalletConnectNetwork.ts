@@ -4,9 +4,6 @@ import { getChainId } from '@/constants/wallet-connect.js';
 import { setNetwork, selectNetwork, type ChiaNetwork } from '@/state/walletConnectNetworkSlice.js';
 import { useAppDispatch, useAppSelector } from '@/state/store.js';
 import store from '@/state/store.js';
-import { createLogger } from '@/utils/logger.js';
-
-const logger = createLogger('useWalletConnectNetwork');
 
 /**
  * Hook to get and set the WalletConnect network (mainnet/testnet).
@@ -60,7 +57,7 @@ export function useWalletConnectNetwork(): {
   const handleSetNetwork = (newNetwork: ChiaNetwork) => {
     // Validate network value
     if (newNetwork !== 'mainnet' && newNetwork !== 'testnet') {
-      logger.error(`Invalid network value: ${newNetwork}. Must be 'mainnet' or 'testnet'.`);
+      console.error(`Invalid network value: ${newNetwork}. Must be 'mainnet' or 'testnet'.`);
       return;
     }
     dispatch(setNetwork(newNetwork));
@@ -72,11 +69,11 @@ export function useWalletConnectNetwork(): {
     chainId = getChainId(network);
     // Validate chain ID
     if (!chainId || (chainId !== 'chia:mainnet' && chainId !== 'chia:testnet')) {
-      logger.error(`Invalid chain ID generated: ${chainId}. Defaulting to mainnet.`);
+      console.error(`Invalid chain ID generated: ${chainId}. Defaulting to mainnet.`);
       chainId = getChainId('mainnet');
     }
   } catch (error) {
-    logger.error('Error getting chain ID:', error);
+    console.error('Error getting chain ID:', error);
     // Fallback to mainnet on error
     chainId = getChainId('mainnet');
   }

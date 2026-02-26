@@ -39,6 +39,7 @@ function AddAssetButton({ asset_id, short_name, image_url, name, onCompletion = 
         return ( 
             <button onClick={() => !isLoading && !isAdded ? addAssetToWallet(asset_id, short_name, image_url, name) : null} className={`${isLoading ? 'animate-pulse' : ''} ${isAdded ? 'bg-green-700/20 text-green-700 cursor-default hover:opacity-100' : 'bg-brandDark/10 text-brandDark dark:text-brandLight'} h-fit w-[144px] transition font-medium hover:opacity-80 py-1 px-4 whitespace-nowrap rounded-lg flex justify-center items-center gap-2`}>
                 {!isLoading && !isAdded && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src="/assets/xch.webp" width={16} height={16} alt="Token logo" className="rounded-full" />
                 )}
                 {isLoading && <div className="w-3.5 aspect-square border-2 border-black/10 rounded-full border-r-brandDark dark:border-r-brandLight animate-spin"></div>}

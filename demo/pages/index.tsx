@@ -1,7 +1,6 @@
 import Head from 'next/head';
 import PageLayout from '../components/PageLayout';
 import CodeExample from '../components/CodeExample';
-import ConnectionStatusCheck from '../components/ConnectionStatusCheck';
 
 const USAGE_EXAMPLE_CODE = `import { useWalletConnectNetwork } from '@maximedogawa/chia-wallet-connect-react';
 
@@ -29,7 +28,6 @@ export default function Home() {
         <title>Chia Wallet Connect - Demo</title>
       </Head>
       <PageLayout>
-        <ConnectionStatusCheck />
         <CodeExample
           title="Usage Example"
           code={USAGE_EXAMPLE_CODE}

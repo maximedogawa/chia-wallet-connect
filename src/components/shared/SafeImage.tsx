@@ -15,6 +15,7 @@ interface SafeImageProps {
  */
 export default function SafeImage({ src, width, height, alt, className, unoptimized }: SafeImageProps) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       width={width}
