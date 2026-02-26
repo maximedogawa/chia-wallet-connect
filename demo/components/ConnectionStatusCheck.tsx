@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
   useWalletConnectionState,
@@ -9,11 +9,11 @@ import {
 import type { RootState } from '@maximedogawa/chia-wallet-connect-react';
 
 /**
- * Demo component: shows WalletConnect session status, relay check, and a
- * wallet query (getAddress) to confirm the full request/response flow works.
+ * Demo component: shows WalletConnect session status, wallet address from
+ * connection state, and optional relay check.
  */
 export default function ConnectionStatusCheck() {
-  const { isConnected, walletConnectSession, isWalletConnect } =
+  const { isConnected, walletConnectSession, isWalletConnect, address } =
     useWalletConnectionState();
   const pairingUri = useSelector(
     (state: RootState) => state.walletConnect.pairingUri,
@@ -24,28 +24,14 @@ export default function ConnectionStatusCheck() {
     error?: string;
   }>({ status: 'idle' });
 
-  const [validateConnection, setValidateConnection] = useState<{
-    status: 'idle' | 'loading' | 'ok' | 'error';
-    error?: string;
-  }>({ status: 'idle' });
-
-  const [walletQuery, setWalletQuery] = useState<{
-    status: 'idle' | 'loading' | 'ok' | 'error';
-    message?: string;
-    error?: string;
-  }>({ status: 'idle' });
-
-  const runValidateConnection = async () => {
-    setValidateConnection({ status: 'loading' });
-    try {
-      const wc = new WalletConnect();
-      const ok = await wc.verifyConnectionWithChip0002ChainId();
-      setValidateConnection(ok ? { status: 'ok' } : { status: 'error', error: 'Validation failed' });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setValidateConnection({ status: 'error', error: message });
-    }
-  };
+  // When tab becomes visible, force re-render so state set while tab was
+  // backgrounded gets painted
+  const [, setVisibilityTick] = useState(0);
+  useEffect(() => {
+    const onVisible = () => setVisibilityTick((t) => t + 1);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const runRelayCheck = async () => {
     setRelayCheck({ status: 'checking' });
@@ -59,35 +45,11 @@ export default function ConnectionStatusCheck() {
     }
   };
 
-  const runWalletQuery = async () => {
-    setWalletQuery({ status: 'loading' });
-    try {
-      const wc = new WalletConnect();
-      const address = await wc.getAddress();
-      if (address) {
-        setWalletQuery({
-          status: 'ok',
-          message: `Wallet responded: ${address}`,
-        });
-      } else {
-        setWalletQuery({
-          status: 'error',
-          error: 'Wallet returned no address',
-        });
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setWalletQuery({ status: 'error', error: message });
-    }
-  };
-
   const sessionStatus = pairingUri
     ? 'Pairing… (use link in wallet)'
     : isWalletConnect && walletConnectSession
       ? 'Connected'
       : 'Not connected';
-
-  const canQueryWallet = Boolean(isWalletConnect && walletConnectSession);
 
   return (
     <div className="flex flex-col gap-2 p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700">
@@ -124,6 +86,12 @@ export default function ConnectionStatusCheck() {
             Topic: {walletConnectSession.topic}
           </p>
         )}
+        {isWalletConnect && address && (
+          <p className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all mt-1">
+            <span className="text-gray-600 dark:text-gray-400">Address: </span>
+            {address}
+          </p>
+        )}
       </div>
 
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700">
@@ -149,63 +117,6 @@ export default function ConnectionStatusCheck() {
         {relayCheck.status === 'error' && (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">
             Relay unavailable: {relayCheck.error}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          Validate connection using Sage method CHIP0002_CHAIN_ID:
-        </p>
-        <button
-          type="button"
-          onClick={runValidateConnection}
-          disabled={!canQueryWallet || validateConnection.status === 'loading'}
-          className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mr-2"
-        >
-          {validateConnection.status === 'loading'
-            ? 'Validating…'
-            : 'Validate (CHIP0002_CHAIN_ID)'}
-        </button>
-        {validateConnection.status === 'ok' && (
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-            Connection validated.
-          </p>
-        )}
-        {validateConnection.status === 'error' && (
-          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-            {validateConnection.error}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          Query wallet (getAddress: chia_getCurrentAddress with chia_getAddress fallback for Sage):
-        </p>
-        <button
-          type="button"
-          onClick={runWalletQuery}
-          disabled={!canQueryWallet || walletQuery.status === 'loading'}
-          className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {walletQuery.status === 'loading'
-            ? 'Querying…'
-            : 'Query wallet (getAddress)'}
-        </button>
-        {!canQueryWallet && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Connect a wallet first to run a query.
-          </p>
-        )}
-        {walletQuery.status === 'ok' && walletQuery.message && (
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400 break-all font-mono">
-            {walletQuery.message}
-          </p>
-        )}
-        {walletQuery.status === 'error' && (
-          <p className="mt-2 text-sm text-red-600 dark:text-red-400 break-all">
-            {walletQuery.error}
           </p>
         )}
       </div>
