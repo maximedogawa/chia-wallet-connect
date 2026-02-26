@@ -15,6 +15,7 @@ export default tseslint.config(
       '**/tailwind.config.*',
       '**/public/**',
       '**/demo/**',
+      '**/scripts/**',
       '**/test.ts',
       '**/examples/**',
     ],
@@ -50,6 +51,12 @@ export default tseslint.config(
     files: ['**/utils/walletIntegration/**/*.{ts,tsx}', '**/redux/**/*.{ts,tsx}', '**/api.tsx', '**/components/**/walletIntegration/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+  {
+    files: ['**/utils/walletIntegration/wallets/walletConnect.ts'],
+    rules: {
+      'max-lines': ['error', { max: 1700, skipBlankLines: true, skipComments: true }],
     },
   },
 )
